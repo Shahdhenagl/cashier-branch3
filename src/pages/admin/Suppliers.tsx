@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useStore, PurchaseItem } from '../../store/useStore';
+import { useStore } from '../../store/useStore';
+import type { PurchaseItem } from '../../store/useStore';
 import { Users, Search, Plus, Edit2, Trash2, Phone, MapPin, Calendar, ShoppingCart, FileText, X, ChevronDown } from 'lucide-react';
 
 export default function Suppliers() {
