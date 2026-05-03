@@ -15,7 +15,8 @@ export default function Customers() {
 
   const filteredCustomers = customers.filter(c => 
     normalizeArabic(c.name).includes(normalizeArabic(searchQuery)) || 
-    c.phone.includes(searchQuery)
+    c.phone.includes(searchQuery) ||
+    c.id.substring(0, 8).toLowerCase().includes(searchQuery.toLowerCase())
   );
 
 
@@ -155,6 +156,7 @@ export default function Customers() {
   </div>
   <div class="invoice-meta">
     <span>رقم: <strong>${order.id}</strong></span>
+    <span>ID العميل: <strong>${order.customer?.id.substring(0, 8) || '—'}</strong></span>
     <span>${printDate}</span>
   </div>
   <table>
@@ -205,7 +207,7 @@ export default function Customers() {
             <Search className="absolute right-4 top-3 text-slate-400" size={20} />
             <input
               type="text"
-              placeholder="ابحث باسم العميل أو رقم الهاتف..."
+              placeholder="ابحث باسم العميل، رقم الهاتف، أو الـ ID..."
               style={{ '--tw-ring-color': storeSettings.themeColor + '40' } as any}
               className="w-full bg-white border border-slate-200 rounded-xl py-2.5 pr-12 pl-4 text-sm focus:outline-none focus:ring-2 shadow-sm transition-all"
               value={searchQuery}
@@ -255,7 +257,10 @@ export default function Customers() {
                           >
                             {customer.name.charAt(0)}
                           </div>
-                          <span className="font-black text-slate-800">{customer.name}</span>
+                          <div className="flex flex-col">
+                            <span className="font-black text-slate-800">{customer.name}</span>
+                            <span className="text-[10px] text-slate-400 font-mono">ID: {customer.id.substring(0, 8)}</span>
+                          </div>
                         </div>
                       </td>
                       <td className="p-5 font-mono font-bold text-slate-500" dir="ltr">{customer.phone}</td>
@@ -321,6 +326,8 @@ export default function Customers() {
                   <h2 className="text-3xl font-black text-slate-800">{selectedCustomer.name}</h2>
                   <div className="flex items-center gap-4 mt-2 text-slate-500 font-bold">
                     <span className="flex items-center gap-1"><CreditCard size={14} /> {selectedCustomer.phone}</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
+                    <span className="bg-slate-100 px-2 py-1 rounded-lg text-indigo-600 font-mono">ID: {selectedCustomer.id.substring(0, 8)}</span>
                     <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
                     <span>سجل منذ: {new Date(selectedCustomer.timestamp).toLocaleDateString('ar-SA')}</span>
                   </div>

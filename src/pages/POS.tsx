@@ -79,6 +79,7 @@ export default function POS() {
     const customerBlock = (orderDetails.customerName || orderDetails.customerPhone)
       ? `<div class="customer-info-grid">
           <div class="info-item"><strong>اسم العميل:</strong> <span>${orderDetails.customerName || '—'}</span></div>
+          <div class="info-item"><strong>رقم العميل (ID):</strong> <span dir="ltr">${orderDetails.customerId?.substring(0, 8) || '—'}</span></div>
           <div class="info-item"><strong>رقم الهاتف:</strong> <span dir="ltr">${orderDetails.customerPhone || '—'}</span></div>
           <div class="info-item"><strong>رقم الفاتورة:</strong> <span>#${invId}</span></div>
           <div class="info-item"><strong>التاريخ:</strong> <span>${printDate}</span></div>
@@ -216,8 +217,14 @@ export default function POS() {
       total: currentTotal,
       paidAmount: finalPaidAmount,
       customerName: currentCustomerName,
-      customerPhone: currentCustomerPhone
+      customerPhone: currentCustomerPhone,
+      customerId: invoiceId // In the store checkout, it returns invoiceId, but we need the customer ID if possible. 
+      // Actually, checkout returns invoiceId. Let's find the customer in store.
     };
+    
+    // Better: find customer after checkout or just pass details.
+    const actualCustomer = useStore.getState().customers.find(c => c.phone === currentCustomerPhone);
+    details.customerId = actualCustomer?.id || '';
 
     setLastInvoiceId(invoiceId);
     setLastCustomerInfo({ name: currentCustomerName, phone: currentCustomerPhone });
@@ -239,7 +246,12 @@ export default function POS() {
     ? customers.filter(c => {
         const normalizedName = normalizeArabic(c.name);
         const normalizedQuery = normalizeArabic(customerName);
-        return normalizedName.includes(normalizedQuery) || c.phone.includes(customerName);
+        const customerIdShort = c.id.substring(0, 8).toLowerCase();
+        return (
+          normalizedName.includes(normalizedQuery) || 
+          c.phone.includes(customerName) ||
+          customerIdShort.includes(customerName.toLowerCase())
+        );
       })
     : [];
 
@@ -634,10 +646,13 @@ export default function POS() {
                     <button
                       key={c.id}
                       onClick={() => handleSelectCustomer(c)}
-                      className="w-full text-right px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-700/50 flex flex-col border-b border-gray-50 dark:border-slate-700 last:border-0"
+                      className="w-full text-right px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-700/50 flex items-center justify-between border-b border-gray-50 dark:border-slate-700 last:border-0"
                     >
-                      <span className="font-bold text-slate-800 dark:text-slate-100">{c.name}</span>
-                      <span className="text-[10px] text-slate-400 font-mono" dir="ltr">{c.phone}</span>
+                      <div className="flex flex-col">
+                        <span className="font-bold text-slate-800 dark:text-slate-100">{c.name}</span>
+                        <span className="text-[10px] text-slate-400 font-mono" dir="ltr">{c.phone}</span>
+                      </div>
+                      <span className="text-[10px] bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-md font-mono text-slate-500">ID: {c.id.substring(0, 8)}</span>
                     </button>
                   ))}
                 </div>
