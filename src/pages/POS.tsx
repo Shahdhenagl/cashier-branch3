@@ -186,11 +186,10 @@ export default function POS() {
 </body></html>`;
 
     const pw = window.open('', '_blank', 'width=800,height=1000');
-    if (pw) { pw.document.write(html); pw.document.close(); }
-  };
-
-    const pw = window.open('', '_blank', 'width=400,height=750');
-    if (pw) { pw.document.write(html); pw.document.close(); }
+    if (pw) {
+      pw.document.write(html);
+      pw.document.close();
+    }
   };
 
   const doCheckout = async (shouldPrint: boolean) => {
