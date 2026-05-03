@@ -47,27 +47,33 @@ export default function Suppliers() {
     const validItems = invItems.filter(i => i.product_id && parseFloat(i.quantity) > 0 && parseFloat(i.purchase_price) > 0);
     if (validItems.length === 0) return alert('أضف منتجاً واحداً على الأقل');
 
-    setIsSaving(true);
-    const items: PurchaseItem[] = validItems.map(i => ({
-      product_id: i.product_id,
-      quantity: parseInt(i.quantity),
-      purchase_price: parseFloat(i.purchase_price),
-    }));
+    try {
+      setIsSaving(true);
+      const items: PurchaseItem[] = validItems.map(i => ({
+        product_id: i.product_id,
+        quantity: parseInt(i.quantity),
+        purchase_price: parseFloat(i.purchase_price),
+      }));
 
-    const invoiceNumber = `PO-${Date.now()}`;
-    await addPurchaseInvoice({
-      invoice_number: invoiceNumber,
-      supplier_id: invSupplierId,
-      total: invTotal,
-      paid_amount: parseFloat(invPaidAmount) || 0,
-    }, items);
+      const invoiceNumber = `PO-${Date.now()}`;
+      await addPurchaseInvoice({
+        invoice_number: invoiceNumber,
+        supplier_id: invSupplierId,
+        total: invTotal,
+        paid_amount: parseFloat(invPaidAmount) || 0,
+      }, items);
 
-    setIsSaving(false);
-    setShowInvoiceModal(false);
-    setInvSupplierId('');
-    setInvPaidAmount('');
-    setInvItems([{ product_id: '', quantity: '1', purchase_price: '' }]);
-    setActiveTab('invoices');
+      alert('تم حفظ الفاتورة بنجاح وتحديث المخزن');
+      setShowInvoiceModal(false);
+      setInvSupplierId('');
+      setInvPaidAmount('');
+      setInvItems([{ product_id: '', quantity: '1', purchase_price: '' }]);
+      setActiveTab('invoices');
+    } catch (error: any) {
+      alert(error.message || 'حدث خطأ أثناء حفظ الفاتورة');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const addInvRow = () => setInvItems([...invItems, { product_id: '', quantity: '1', purchase_price: '' }]);

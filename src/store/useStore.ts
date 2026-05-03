@@ -707,9 +707,9 @@ export const useStore = create<CashierStore>((set, get) => ({
       .select()
       .single();
 
-    if (invError || !invData) {
+    if (invError) {
       console.error("Add Purchase Invoice Error:", invError);
-      return;
+      throw new Error(`خطأ في حفظ الفاتورة: ${invError.message}`);
     }
 
     const newInvoiceId = (invData as any).id;
@@ -725,6 +725,7 @@ export const useStore = create<CashierStore>((set, get) => ({
     const { error: itemsError } = await supabase.from('purchase_items').insert(itemsToInsert);
     if (itemsError) {
       console.error("Add Purchase Items Error:", itemsError);
+      throw new Error(`خطأ في حفظ أصناف الفاتورة: ${itemsError.message}`);
     }
 
     // 3. Update stock and average price for each product
