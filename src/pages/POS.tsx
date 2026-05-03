@@ -301,6 +301,8 @@ export default function POS() {
     setCustomerPhone(e.target.value);
   };
 
+  const activeCustomer = customers.find(c => c.phone === customerPhone);
+
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-slate-900 transition-colors duration-300 overflow-hidden font-sans text-gray-900 dark:text-gray-100">
       
@@ -615,18 +617,24 @@ export default function POS() {
               </div>
             </div>
           </div>
-          <div className="relative flex gap-3 text-sm">
+          <div className="relative flex gap-2 text-sm">
+            {activeCustomer && (
+              <div className="bg-white dark:bg-slate-800 border-2 border-indigo-500 text-indigo-600 dark:text-indigo-400 px-3 py-1.5 rounded-xl font-mono font-black flex flex-col items-center justify-center shadow-sm shrink-0">
+                <span className="text-[8px] uppercase opacity-70 mb-0.5">ID العميل</span>
+                <span className="text-sm tracking-tighter">{activeCustomer.id.substring(0, 8)}</span>
+              </div>
+            )}
             <div className="flex-1">
               <input 
                 type="text" 
                 dir="ltr" 
                 value={customerPhone} 
                 onChange={handlePhoneChange} 
-                className="w-full bg-white/95 text-slate-800 placeholder-slate-400 border-0 py-2.5 px-3 rounded-lg focus:ring-2 focus:ring-white focus:outline-none transition font-medium shadow-inner text-sm" 
+                className="w-full bg-white/95 text-slate-800 placeholder-slate-400 border-0 py-2.5 px-3 rounded-lg focus:ring-2 focus:ring-white focus:outline-none transition font-medium shadow-inner text-sm h-full" 
                 placeholder="رقم الموبايل (اختياري)" 
               />
             </div>
-            <div className="flex-1 relative">
+            <div className="flex-[1.5] relative">
               <input 
                 type="text" 
                 value={customerName} 
@@ -635,7 +643,7 @@ export default function POS() {
                   setShowCustomerSuggestions(true);
                 }} 
                 onFocus={() => setShowCustomerSuggestions(true)}
-                className="w-full bg-white/95 text-slate-800 placeholder-slate-400 border-0 py-2.5 px-3 rounded-lg focus:ring-2 focus:ring-white focus:outline-none transition font-medium shadow-inner text-sm" 
+                className="w-full bg-white/95 text-slate-800 placeholder-slate-400 border-0 py-2.5 px-3 rounded-lg focus:ring-2 focus:ring-white focus:outline-none transition font-medium shadow-inner text-sm h-full" 
                 placeholder={`اسم العميل (${customers.length})...`} 
               />
               
@@ -652,7 +660,10 @@ export default function POS() {
                         <span className="font-bold text-slate-800 dark:text-slate-100">{c.name}</span>
                         <span className="text-[10px] text-slate-400 font-mono" dir="ltr">{c.phone}</span>
                       </div>
-                      <span className="text-[10px] bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-md font-mono text-slate-500">ID: {c.id.substring(0, 8)}</span>
+                      <div className="bg-indigo-600 dark:bg-indigo-500 px-3 py-2 rounded-xl border border-indigo-700 dark:border-indigo-400 text-center min-w-[90px] shadow-sm">
+                        <p className="text-[8px] font-bold text-white/70 uppercase mb-0.5">ID العميل</p>
+                        <p className="text-xs font-black text-white font-mono tracking-wider">{c.id.substring(0, 8)}</p>
+                      </div>
                     </button>
                   ))}
                 </div>
