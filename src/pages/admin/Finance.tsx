@@ -6,7 +6,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 export default function Finance() {
-  const { expenses, orders, storeSettings, addExpense, updateExpense, deleteExpense } = useStore();
+  const { expenses, orders, storeSettings, addExpense, updateExpense, deleteExpense, purchaseInvoices } = useStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
@@ -27,7 +27,9 @@ export default function Finance() {
 
   const totalExpensesValue = expenses.reduce((sum, e) => sum + e.amount, 0);
 
-  const netSafeBalance = (totalSales + totalPayments) - totalReturnsValue - totalExpensesValue;
+  const totalPurchasesPaid = purchaseInvoices.reduce((sum, inv) => sum + inv.paid_amount, 0);
+
+  const netSafeBalance = (totalSales + totalPayments) - totalReturnsValue - totalExpensesValue - totalPurchasesPaid;
 
   const handleOpenModal = (expense: Expense | null = null) => {
     if (expense) {
@@ -92,6 +94,7 @@ export default function Finance() {
       ["Payments Collected", `${totalPayments} ${storeSettings.currency}`],
       ["Total Returns", `${totalReturnsValue} ${storeSettings.currency}`],
       ["Total Expenses", `${totalExpensesValue} ${storeSettings.currency}`],
+      ["Total Purchases Paid", `${totalPurchasesPaid} ${storeSettings.currency}`],
       ["Net Safe Balance", `${netSafeBalance} ${storeSettings.currency}`],
     ];
 
@@ -187,11 +190,11 @@ export default function Finance() {
             </div>
             <div>
               <p className="text-slate-400 font-bold text-xs">إجمالي الخارج</p>
-              <p className="text-xs font-black text-red-600 uppercase tracking-tighter">(مرتجعات + مصاريف)</p>
+              <p className="text-xs font-black text-red-600 uppercase tracking-tighter">(مرتجعات + مصاريف + مشتريات)</p>
             </div>
           </div>
           <h3 className="text-3xl font-black text-slate-800">
-            {(totalReturnsValue + totalExpensesValue).toLocaleString()} 
+            {(totalReturnsValue + totalExpensesValue + totalPurchasesPaid).toLocaleString()} 
             <span className="text-sm font-normal text-slate-400 mr-2">{storeSettings.currency}</span>
           </h3>
         </div>

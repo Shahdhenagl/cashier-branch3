@@ -1,7 +1,9 @@
 import { useState, useMemo } from 'react';
 import { useStore } from '../../store/useStore';
 import { ArrowRightLeft, Search, User, Printer, CreditCard, FileText, Table as TableIcon } from 'lucide-react';
+import { normalizeArabic } from '../../utils/textUtils';
 import * as XLSX from 'xlsx';
+
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -35,8 +37,17 @@ export default function Invoices() {
     }
 
     const customerBlock = order.customer
-      ? `<div class="customer-box"><strong>العميل:</strong> ${order.customer.name} &nbsp;|&nbsp; <strong>هاتف:</strong> <span dir="ltr">${order.customer.phone}</span></div>`
-      : '';
+      ? `<div class="customer-info-grid">
+          <div class="info-item"><strong>اسم العميل:</strong> <span>${order.customer.name}</span></div>
+          <div class="info-item"><strong>رقم الهاتف:</strong> <span dir="ltr">${order.customer.phone}</span></div>
+          <div class="info-item"><strong>رقم الفاتورة:</strong> <span>#${order.id}</span></div>
+          <div class="info-item"><strong>التاريخ:</strong> <span>${printDate}</span></div>
+         </div>`
+      : `<div class="customer-info-grid">
+          <div class="info-item"><strong>اسم العميل:</strong> <span>عميل نقدي</span></div>
+          <div class="info-item"><strong>رقم الفاتورة:</strong> <span>#${order.id}</span></div>
+          <div class="info-item"><strong>التاريخ:</strong> <span>${printDate}</span></div>
+         </div>`;
 
     const html = `<!DOCTYPE html>
 <html dir="rtl" lang="ar">
@@ -44,71 +55,104 @@ export default function Invoices() {
   <meta charset="UTF-8"/>
   <title>${isPayment ? 'وصل سداد' : 'فاتورة'} #${order.id}</title>
   <style>
-    *{margin:0;padding:0;box-sizing:border-box;}
-    body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#111;width:320px;margin:0 auto;padding:16px;}
-    .header{text-align:center;border-bottom:2px dashed #333;padding-bottom:12px;margin-bottom:12px;}
-    .logo{width:64px;height:64px;object-fit:cover;border-radius:12px;margin-bottom:6px;}
-    .store-name{font-size:18px;font-weight:900;margin-bottom:4px;}
-    .store-info{font-size:11px;color:#555;line-height:1.7;}
-    .invoice-meta{display:flex;justify-content:space-between;font-size:11px;color:#555;margin:8px 0;background:#f5f5f5;padding:6px 8px;border-radius:6px;}
-    .customer-box{background:#f0f4ff;border-radius:6px;padding:6px 10px;font-size:12px;margin-bottom:8px;border-right:3px solid #6366f1;}
-    table{width:100%;border-collapse:collapse;}
-    thead th{font-size:12px;color:#888;padding:4px;border-bottom:2px solid #eee;text-align:right;}
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
+    *{margin:0;padding:0;box-sizing:border-box;font-family:'Cairo', sans-serif;}
+    body{background:#fff;color:#1e293b;padding:0;margin:0;}
+    .invoice-container{width:148mm;min-height:210mm;margin:0 auto;padding:12mm;position:relative;display:flex;flex-direction:column;}
+    
+    .header-main{display:flex;justify-content:space-between;align-items:center;border-bottom:4px solid #1e293b;padding-bottom:15px;margin-bottom:20px;}
+    .store-identity{display:flex;align-items:center;gap:15px;}
+    .logo{width:70px;height:70px;object-fit:contain;border-radius:12px;}
+    .store-name{font-size:24px;font-weight:900;color:#1e293b;line-height:1;}
+    .store-details{font-size:11px;color:#64748b;margin-top:5px;line-height:1.5;}
+    
+    .invoice-title-badge{background:#1e293b;color:#fff;padding:8px 20px;border-radius:8px;font-weight:900;font-size:18px;}
+    
+    .customer-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:25px;background:#f8fafc;padding:15px;border-radius:12px;border:1px solid #e2e8f0;}
+    .info-item{font-size:13px;display:flex;gap:8px;}
+    .info-item strong{color:#64748b;white-space:nowrap;}
+    .info-item span{color:#1e293b;font-weight:700;}
+    
+    table{width:100%;border-collapse:collapse;margin-bottom:20px;}
+    thead th{background:#f1f5f9;color:#475569;font-size:13px;padding:12px 8px;text-align:center;border-bottom:2px solid #cbd5e1;}
+    thead th:nth-child(2){text-align:right;}
     thead th:last-child{text-align:left;}
-    .totals{margin-top:10px;border-top:2px dashed #333;padding-top:10px;}
-    .total-row{display:flex;justify-content:space-between;font-size:13px;padding:3px 0;}
-    .grand-total{font-size:17px;font-weight:900;border-top:1px solid #ddd;margin-top:6px;padding-top:8px;}
-    .footer{text-align:center;margin-top:16px;font-size:12px;color:#888;border-top:2px dashed #bbb;padding-top:10px;}
-    @media print{@page{margin:4mm;size:80mm auto;}}
+    
+    .summary-section{margin-right:auto;width:60%;margin-top:auto;}
+    .summary-row{display:flex;justify-content:space-between;padding:8px 0;font-size:14px;border-bottom:1px solid #f1f5f9;}
+    .summary-row.total{border-top:2px solid #1e293b;border-bottom:none;margin-top:5px;font-size:20px;font-weight:900;color:#1e293b;}
+    
+    .payment-status{margin-top:15px;padding:10px;border-radius:8px;text-align:center;font-weight:bold;font-size:14px;}
+    .status-paid{background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;}
+    .status-debt{background:#fef2f2;color:#dc2626;border:1px solid #fecaca;}
+    
+    .footer{text-align:center;margin-top:30px;padding-top:15px;border-top:1px dashed #cbd5e1;font-size:12px;color:#94a3b8;font-weight:bold;}
+    
+    @media print{
+      @page{size:A5;margin:0;}
+      body{-webkit-print-color-adjust:exact;}
+      .invoice-container{width:148mm;height:210mm;padding:10mm;}
+    }
   </style>
 </head>
 <body>
-  <div class="header">
-    <img class="logo" src="${storeSettings.logo}" onerror="this.style.display='none'" />
-    <div class="store-name">${storeSettings.name}</div>
-    <div class="store-info">
-      ${storeSettings.address ? `${storeSettings.address}<br/>` : ''}
-      ${storeSettings.phone ? `هاتف: ${storeSettings.phone}` : ''}
-      ${storeSettings.phone2 ? ` | ${storeSettings.phone2}` : ''}
-    </div>
-  </div>
-  <div class="invoice-meta">
-    <span>${isPayment ? 'رقم الإيصال' : 'رقم الفاتورة'}: <strong>${order.id}</strong></span>
-    <span>${printDate}</span>
-  </div>
-  ${customerBlock}
-  ${isPayment ? `<h3 style="text-align:center;margin:10px 0;font-size:16px;color:#444;">إيصال سداد نقدي</h3>` : ''}
-  <table>
-    <thead><tr>
-      <th>${isPayment ? 'البيان' : 'المنتج'}</th>
-      <th style="text-align:center">${isPayment ? '' : 'كمية'}</th>
-      <th style="text-align:left">إجمالي</th>
-    </tr></thead>
-    <tbody>${itemsHtml}</tbody>
-  </table>
-  <div class="totals">
-    ${isPayment ? `
-      <div class="total-row grand-total">
-        <span>إجمالي المبلغ المسدد:</span>
-        <span>${order.paid_amount.toFixed(2)} ${storeSettings.currency}</span>
-      </div>
-    ` : `
-      <div class="total-row"><span>المجموع الفرعي:</span><span>${subtotal.toFixed(2)} ${storeSettings.currency}</span></div>
-      <div class="total-row"><span>الضريبة (${storeSettings.taxRate}%):</span><span>${taxValue.toFixed(2)} ${storeSettings.currency}</span></div>
-      <div class="total-row grand-total"><span>الإجمالي:</span><span>${order.total.toFixed(2)} ${storeSettings.currency}</span></div>
-      ${order.items.some((i:any) => i.returned_quantity > 0) ? `
-        <div class="total-row" style="color:red;font-weight:bold;">
-          <span>إجمالي المرتجع:</span>
-          <span>-${order.items.reduce((sum:number, i:any) => sum + (i.returned_quantity * i.sale_price), 0).toFixed(2)} ${storeSettings.currency}</span>
+  <div class="invoice-container">
+    <div class="header-main">
+      <div class="store-identity">
+        <img class="logo" src="${storeSettings.logo}" onerror="this.style.display='none'" />
+        <div>
+          <div class="store-name">${storeSettings.name}</div>
+          <div class="store-details">
+            ${storeSettings.address ? `📍 ${storeSettings.address}<br/>` : ''}
+            ${storeSettings.phone ? `📞 ${storeSettings.phone}` : ''}
+            ${storeSettings.phone2 ? ` | ${storeSettings.phone2}` : ''}
+          </div>
         </div>
-      ` : ''}
-    `}
+      </div>
+      <div class="invoice-title-badge">${isPayment ? 'إيصال سداد' : 'فاتورة ضريبية'}</div>
+    </div>
+
+    ${customerBlock}
+
+    <table>
+      <thead><tr>
+        <th style="width:40px">#</th>
+        <th style="text-align:right">${isPayment ? 'البيان' : 'المنتج'}</th>
+        <th style="width:60px">${isPayment ? '' : 'الكمية'}</th>
+        <th style="width:80px">السعر</th>
+        <th style="width:100px;text-align:left">الإجمالي</th>
+      </tr></thead>
+      <tbody>${itemsHtml}</tbody>
+    </table>
+
+    <div class="summary-section">
+      ${isPayment ? `
+        <div class="summary-row total">
+          <span>إجمالي السداد:</span>
+          <span>${order.paid_amount.toFixed(2)} ${storeSettings.currency}</span>
+        </div>
+      ` : `
+        <div class="summary-row"><span>المجموع الفرعي:</span><span>${subtotal.toFixed(2)} ${storeSettings.currency}</span></div>
+        <div class="summary-row"><span>الضريبة (${storeSettings.taxRate}%):</span><span>${taxValue.toFixed(2)} ${storeSettings.currency}</span></div>
+        <div class="summary-row total"><span>الإجمالي النهائي:</span><span>${order.total.toFixed(2)} ${storeSettings.currency}</span></div>
+        
+        ${(order.total - order.paid_amount > 0) ? `
+          <div class="payment-status status-debt">
+            <div>متبقي للتحصيل (آجل): ${(order.total - order.paid_amount).toFixed(2)} ${storeSettings.currency}</div>
+            <div style="font-size:11px;opacity:0.8;margin-top:2px;">تم سداد: ${order.paid_amount.toFixed(2)} ${storeSettings.currency}</div>
+          </div>
+        ` : `
+          <div class="payment-status status-paid">✓ تم سداد الفاتورة بالكامل</div>
+        `}
+      `}
+    </div>
+
+    <div class="footer">شكراً لثقتكم بنا - ${storeSettings.name} ترحب بكم دائماً</div>
   </div>
-  <div class="footer">شكراً لتعاملكم ♥</div>
-  <script>window.onload=()=>{window.print();window.onafterprint=()=>window.close();}<\/script>
+  <script>window.onload=()=>{setTimeout(()=>{window.print();window.onafterprint=()=>window.close();},500);}<\/script>
 </body></html>`;
 
-    const pw = window.open('', '_blank', 'width=400,height=600');
+    const pw = window.open('', '_blank', 'width=800,height=1000');
     if (pw) { pw.document.write(html); pw.document.close(); }
   };
 
@@ -167,8 +211,9 @@ export default function Invoices() {
       const searchStr = searchQuery.toLowerCase();
       const matchesSearch = 
         o.id.toLowerCase().includes(searchStr) || 
-        (o.customer?.name || '').toLowerCase().includes(searchStr) ||
+        normalizeArabic(o.customer?.name || '').includes(normalizeArabic(searchStr)) ||
         (o.customer?.phone || '').includes(searchStr);
+
 
       return matchesMonth && matchesYear && matchesReturns && matchesSearch;
     });

@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { BookUser, CreditCard, Search, Banknote, X, FileText, Table as TableIcon } from 'lucide-react';
+import { normalizeArabic } from '../../utils/textUtils';
 import * as XLSX from 'xlsx';
+
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -32,8 +34,10 @@ export default function DeferredAccounts() {
     .sort((a, b) => b.totalDebt - a.totalDebt);
 
   const filteredCustomers = customersWithDebt.filter(c => 
-    c.name.includes(searchQuery) || c.phone.includes(searchQuery)
+    normalizeArabic(c.name).includes(normalizeArabic(searchQuery)) || 
+    c.phone.includes(searchQuery)
   );
+
 
   const exportExcel = () => {
     const wsData = [

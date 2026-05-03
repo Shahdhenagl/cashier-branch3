@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { Search, FileText, Table as TableIcon, User, Eye, Printer, X, TrendingUp, Wallet, ArrowRightLeft, CreditCard } from 'lucide-react';
+import { normalizeArabic } from '../../utils/textUtils';
 import * as XLSX from 'xlsx';
+
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -12,8 +14,10 @@ export default function Customers() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const filteredCustomers = customers.filter(c => 
-    c.name.includes(searchQuery) || c.phone.includes(searchQuery)
+    normalizeArabic(c.name).includes(normalizeArabic(searchQuery)) || 
+    c.phone.includes(searchQuery)
   );
+
 
   const getCustomerMetrics = (customerId: string) => {
     const customerOrders = orders.filter(o => o.customer?.id === customerId);

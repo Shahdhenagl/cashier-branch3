@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import { ShoppingCart, Search, Plus, Minus, Trash2, Banknote, RefreshCcw, Moon, Sun, ArrowRightLeft, X, Printer } from 'lucide-react';
+import { normalizeArabic } from '../utils/textUtils';
+
 
 export default function POS() {
   const { products, categories, cart, addToCart, removeFromCart, updateQuantity, clearCart, checkout, processReturn, storeSettings, orders, activeInvoiceId, customers } = useStore();
@@ -22,6 +24,7 @@ export default function POS() {
   const [lastInvoiceId, setLastInvoiceId] = useState('');
   const [lastCustomerInfo, setLastCustomerInfo] = useState<any>(null);
   const [lastOrderDetails, setLastOrderDetails] = useState<any>(null);
+  const [showCustomerSuggestions, setShowCustomerSuggestions] = useState(false);
 
   useEffect(() => {
     if (isDarkMode) {
@@ -63,17 +66,28 @@ export default function POS() {
   const printInvoice = (invId: string, orderDetails: any) => {
     const currentSettings = { ...storeSettings };
     const printDate = new Date().toLocaleString('ar-SA');
-    const itemsHtml = orderDetails.cart.map((item: any) =>
+    const itemsHtml = orderDetails.cart.map((item: any, index: number) =>
       `<tr>
-        <td style="padding:6px 4px;border-bottom:1px dashed #ddd;font-size:13px;">${item.name}</td>
-        <td style="padding:6px 4px;border-bottom:1px dashed #ddd;text-align:center;font-size:13px;">${item.quantity}</td>
-        <td style="padding:6px 4px;border-bottom:1px dashed #ddd;text-align:left;font-size:13px;">${(item.sale_price * item.quantity).toFixed(2)}</td>
+        <td style="padding:10px 4px;border-bottom:1px solid #eee;text-align:center;font-weight:bold;color:#666;">${index + 1}</td>
+        <td style="padding:10px 4px;border-bottom:1px solid #eee;font-weight:900;font-size:14px;">${item.name}</td>
+        <td style="padding:10px 4px;border-bottom:1px solid #eee;text-align:center;font-weight:bold;">${item.quantity}</td>
+        <td style="padding:10px 4px;border-bottom:1px solid #eee;text-align:center;font-weight:bold;">${item.sale_price.toFixed(2)}</td>
+        <td style="padding:10px 4px;border-bottom:1px solid #eee;text-align:left;font-weight:black;font-size:15px;">${(item.sale_price * item.quantity).toFixed(2)}</td>
       </tr>`
     ).join('');
 
     const customerBlock = (orderDetails.customerName || orderDetails.customerPhone)
-      ? `<div class="customer-box"><strong>العميل:</strong> ${orderDetails.customerName || '—'} &nbsp;|&nbsp; <strong>هاتف:</strong> <span dir="ltr">${orderDetails.customerPhone || '—'}</span></div>`
-      : '';
+      ? `<div class="customer-info-grid">
+          <div class="info-item"><strong>اسم العميل:</strong> <span>${orderDetails.customerName || '—'}</span></div>
+          <div class="info-item"><strong>رقم الهاتف:</strong> <span dir="ltr">${orderDetails.customerPhone || '—'}</span></div>
+          <div class="info-item"><strong>رقم الفاتورة:</strong> <span>#${invId}</span></div>
+          <div class="info-item"><strong>التاريخ:</strong> <span>${printDate}</span></div>
+         </div>`
+      : `<div class="customer-info-grid">
+          <div class="info-item"><strong>اسم العميل:</strong> <span>عميل نقدي</span></div>
+          <div class="info-item"><strong>رقم الفاتورة:</strong> <span>#${invId}</span></div>
+          <div class="info-item"><strong>التاريخ:</strong> <span>${printDate}</span></div>
+         </div>`;
 
     const html = `<!DOCTYPE html>
 <html dir="rtl" lang="ar">
@@ -81,59 +95,99 @@ export default function POS() {
 <meta charset="UTF-8"/>
 <title>فاتورة #${invId}</title>
 <style>
-  *{margin:0;padding:0;box-sizing:border-box;}
-  body{font-family:'Segoe UI',Arial,sans-serif;background:#fff;color:#111;width:320px;margin:0 auto;padding:16px;}
-  .header{text-align:center;border-bottom:2px dashed #333;padding-bottom:12px;margin-bottom:12px;}
-  .logo{width:64px;height:64px;object-fit:cover;border-radius:12px;margin-bottom:6px;}
-  .store-name{font-size:18px;font-weight:900;margin-bottom:4px;}
-  .store-info{font-size:11px;color:#555;line-height:1.7;}
-  .invoice-meta{display:flex;justify-content:space-between;font-size:11px;color:#555;margin:8px 0;background:#f5f5f5;padding:6px 8px;border-radius:6px;}
-  .customer-box{background:#f0f4ff;border-radius:6px;padding:6px 10px;font-size:12px;margin-bottom:8px;border-right:3px solid #6366f1;}
-  table{width:100%;border-collapse:collapse;}
-  thead th{font-size:12px;color:#888;padding:4px;border-bottom:2px solid #eee;text-align:right;}
+  @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box;font-family:'Cairo', sans-serif;}
+  body{background:#fff;color:#1e293b;padding:0;margin:0;}
+  .invoice-container{width:148mm;min-height:210mm;margin:0 auto;padding:12mm;position:relative;display:flex;flex-direction:column;}
+  
+  .header-main{display:flex;justify-content:space-between;align-items:center;border-bottom:4px solid #1e293b;padding-bottom:15px;margin-bottom:20px;}
+  .store-identity{display:flex;align-items:center;gap:15px;}
+  .logo{width:70px;height:70px;object-fit:contain;border-radius:12px;}
+  .store-name{font-size:24px;font-weight:900;color:#1e293b;line-height:1;}
+  .store-details{font-size:11px;color:#64748b;margin-top:5px;line-height:1.5;}
+  
+  .invoice-title-badge{background:#1e293b;color:#fff;padding:8px 20px;border-radius:8px;font-weight:900;font-size:18px;}
+  
+  .customer-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:25px;background:#f8fafc;padding:15px;border-radius:12px;border:1px solid #e2e8f0;}
+  .info-item{font-size:13px;display:flex;gap:8px;}
+  .info-item strong{color:#64748b;white-space:nowrap;}
+  .info-item span{color:#1e293b;font-weight:700;}
+  
+  table{width:100%;border-collapse:collapse;margin-bottom:20px;}
+  thead th{background:#f1f5f9;color:#475569;font-size:13px;padding:12px 8px;text-align:center;border-bottom:2px solid #cbd5e1;}
+  thead th:nth-child(2){text-align:right;}
   thead th:last-child{text-align:left;}
-  .totals{margin-top:10px;border-top:2px dashed #333;padding-top:10px;}
-  .total-row{display:flex;justify-content:space-between;font-size:13px;padding:3px 0;}
-  .grand-total{font-size:17px;font-weight:900;border-top:1px solid #ddd;margin-top:6px;padding-top:8px;}
-  .footer{text-align:center;margin-top:16px;font-size:12px;color:#888;border-top:2px dashed #bbb;padding-top:10px;}
-  @media print{@page{margin:4mm;size:80mm auto;}}
+  
+  .summary-section{margin-right:auto;width:60%;margin-top:auto;}
+  .summary-row{display:flex;justify-content:space-between;padding:8px 0;font-size:14px;border-bottom:1px solid #f1f5f9;}
+  .summary-row.total{border-top:2px solid #1e293b;border-bottom:none;margin-top:5px;font-size:20px;font-weight:900;color:#1e293b;}
+  
+  .payment-status{margin-top:15px;padding:10px;border-radius:8px;text-align:center;font-weight:bold;font-size:14px;}
+  .status-paid{background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;}
+  .status-debt{background:#fef2f2;color:#dc2626;border:1px solid #fecaca;}
+  
+  .footer{text-align:center;margin-top:30px;padding-top:15px;border-top:1px dashed #cbd5e1;font-size:12px;color:#94a3b8;font-weight:bold;}
+  
+  @media print{
+    @page{size:A5;margin:0;}
+    body{-webkit-print-color-adjust:exact;}
+    .invoice-container{width:148mm;height:210mm;padding:10mm;}
+  }
 </style>
 </head>
 <body>
-<div class="header">
-  <img class="logo" src="${currentSettings.logo}" onerror="this.style.display='none'" />
-  <div class="store-name">${currentSettings.name}</div>
-  <div class="store-info">
-    ${currentSettings.address ? `${currentSettings.address}<br/>` : ''}
-    ${currentSettings.phone ? `هاتف: ${currentSettings.phone}` : ''}
-    ${currentSettings.phone2 ? ` | ${currentSettings.phone2}` : ''}
+<div class="invoice-container">
+  <div class="header-main">
+    <div class="store-identity">
+      <img class="logo" src="${currentSettings.logo}" onerror="this.style.display='none'" />
+      <div>
+        <div class="store-name">${currentSettings.name}</div>
+        <div class="store-details">
+          ${currentSettings.address ? `📍 ${currentSettings.address}<br/>` : ''}
+          ${currentSettings.phone ? `📞 ${currentSettings.phone}` : ''}
+          ${currentSettings.phone2 ? ` | ${currentSettings.phone2}` : ''}
+        </div>
+      </div>
+    </div>
+    <div class="invoice-title-badge">فاتورة ضريبية</div>
   </div>
+
+  ${customerBlock}
+
+  <table>
+    <thead><tr>
+      <th style="width:40px">#</th>
+      <th style="text-align:right">البيان / المنتج</th>
+      <th style="width:60px">الكمية</th>
+      <th style="width:80px">السعر</th>
+      <th style="width:100px;text-align:left">الإجمالي</th>
+    </tr></thead>
+    <tbody>${itemsHtml}</tbody>
+  </table>
+
+  <div class="summary-section">
+    <div class="summary-row"><span>المجموع الفرعي:</span><span>${orderDetails.subtotal.toFixed(2)} ${currentSettings.currency}</span></div>
+    <div class="summary-row"><span>الضريبة (${currentSettings.taxRate}%):</span><span>${orderDetails.tax.toFixed(2)} ${currentSettings.currency}</span></div>
+    <div class="summary-row total"><span>الإجمالي النهائي:</span><span>${orderDetails.total.toFixed(2)} ${currentSettings.currency}</span></div>
+    
+    ${(orderDetails.paidAmount !== undefined && orderDetails.paidAmount < orderDetails.total) ? `
+      <div class="payment-status status-debt">
+        <div>متبقي للتحصيل (آجل): ${(orderDetails.total - (orderDetails.paidAmount || 0)).toFixed(2)} ${currentSettings.currency}</div>
+        <div style="font-size:11px;opacity:0.8;margin-top:2px;">تم سداد: ${(orderDetails.paidAmount || 0).toFixed(2)} ${currentSettings.currency}</div>
+      </div>
+    ` : `
+      <div class="payment-status status-paid">✓ تم سداد الفاتورة بالكامل</div>
+    `}
+  </div>
+
+  <div class="footer">شكراً لثقتكم بنا - ${currentSettings.name} ترحب بكم دائماً</div>
 </div>
-<div class="invoice-meta">
-  <span>رقم الفاتورة: <strong>${invId}</strong></span>
-  <span>${printDate}</span>
-</div>
-${customerBlock}
-<table>
-  <thead><tr>
-    <th>المنتج</th>
-    <th style="text-align:center">كمية</th>
-    <th style="text-align:left">إجمالي</th>
-  </tr></thead>
-  <tbody>${itemsHtml}</tbody>
-</table>
-<div class="totals">
-  <div class="total-row"><span>المجموع الفرعي:</span><span>${orderDetails.subtotal.toFixed(2)} ${currentSettings.currency}</span></div>
-  <div class="total-row"><span>الضريبة (${currentSettings.taxRate}%):</span><span>${orderDetails.tax.toFixed(2)} ${currentSettings.currency}</span></div>
-  <div class="total-row grand-total"><span>الإجمالي:</span><span>${orderDetails.total.toFixed(2)} ${currentSettings.currency}</span></div>
-  ${(orderDetails.paidAmount !== undefined && orderDetails.paidAmount < orderDetails.total) ? `
-  <div class="total-row" style="color:#16a34a;font-weight:700;margin-top:6px;"><span>✓ تم دفع:</span><span>${(orderDetails.paidAmount || 0).toFixed(2)} ${currentSettings.currency}</span></div>
-  <div class="total-row" style="color:#dc2626;font-weight:900;font-size:15px;border-top:2px dashed #dc2626;padding-top:8px;margin-top:4px;"><span>⚠️ المتبقي (آجل):</span><span>${(orderDetails.total - (orderDetails.paidAmount || 0)).toFixed(2)} ${currentSettings.currency}</span></div>
-  ` : `<div class="total-row" style="color:#16a34a;font-weight:700;margin-top:4px;"><span>✓ تم السداد كاملاً</span><span></span></div>`}
-</div>
-<div class="footer">شكراً لتعاملكم ♥</div>
-<script>window.onload=()=>{window.print();window.onafterprint=()=>window.close();}<\/script>
+<script>window.onload=()=>{setTimeout(()=>{window.print();window.onafterprint=()=>window.close();},500);}<\/script>
 </body></html>`;
+
+    const pw = window.open('', '_blank', 'width=800,height=1000');
+    if (pw) { pw.document.write(html); pw.document.close(); }
+  };
 
     const pw = window.open('', '_blank', 'width=400,height=750');
     if (pw) { pw.document.write(html); pw.document.close(); }
@@ -179,6 +233,23 @@ ${customerBlock}
     setCustomerPhone('');
     setPaidAmountStr('');
     setCustomerDebt(0);
+    setShowCustomerSuggestions(false);
+  };
+
+  const filteredCustomers = customerName.trim() 
+    ? customers.filter(c => {
+        const normalizedName = normalizeArabic(c.name);
+        const normalizedQuery = normalizeArabic(customerName);
+        return normalizedName.includes(normalizedQuery) || c.phone.includes(customerName);
+      })
+    : [];
+
+
+
+  const handleSelectCustomer = (customer: any) => {
+    setCustomerName(customer.name);
+    setCustomerPhone(customer.phone);
+    setShowCustomerSuggestions(false);
   };
 
   const filteredProducts = products.filter(
@@ -514,9 +585,11 @@ ${customerBlock}
             background: `linear-gradient(160deg, ${storeSettings.themeColor} 0%, ${storeSettings.themeColor}dd 100%)`,
             boxShadow: `0 8px 32px ${storeSettings.themeColor}66`
           }}
-          className="p-4 text-white flex flex-col relative overflow-hidden h-auto rounded-bl-[40px] gap-3"
+          className="p-4 text-white flex flex-col relative h-auto rounded-bl-[40px] gap-3 z-[60]"
         >
-          <div className="absolute inset-0 bg-black/20"></div>
+
+          <div className="absolute inset-0 bg-black/20 rounded-bl-[40px]"></div>
+
           <div className="relative flex justify-between items-center">
              <h2 className="text-xl font-black flex items-center gap-2 drop-shadow">
               <ShoppingCart size={24} />
@@ -542,14 +615,37 @@ ${customerBlock}
                 placeholder="رقم الموبايل (اختياري)" 
               />
             </div>
-            <div className="flex-1">
+            <div className="flex-1 relative">
               <input 
                 type="text" 
                 value={customerName} 
-                onChange={e => setCustomerName(e.target.value)} 
+                onChange={e => {
+                  setCustomerName(e.target.value);
+                  setShowCustomerSuggestions(true);
+                }} 
+                onFocus={() => setShowCustomerSuggestions(true)}
                 className="w-full bg-white/95 text-slate-800 placeholder-slate-400 border-0 py-2.5 px-3 rounded-lg focus:ring-2 focus:ring-white focus:outline-none transition font-medium shadow-inner text-sm" 
-                placeholder="اسم العميل..." 
+                placeholder={`اسم العميل (${customers.length})...`} 
               />
+              
+              {showCustomerSuggestions && filteredCustomers.length > 0 && (
+                <div className="absolute z-[200] left-0 right-0 top-full mt-1 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-gray-100 dark:border-slate-700 max-h-64 overflow-y-auto">
+
+                  {filteredCustomers.map(c => (
+                    <button
+                      key={c.id}
+                      onClick={() => handleSelectCustomer(c)}
+                      className="w-full text-right px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-700/50 flex flex-col border-b border-gray-50 dark:border-slate-700 last:border-0"
+                    >
+                      <span className="font-bold text-slate-800 dark:text-slate-100">{c.name}</span>
+                      <span className="text-[10px] text-slate-400 font-mono" dir="ltr">{c.phone}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {showCustomerSuggestions && customerName.trim() !== '' && (
+                <div className="fixed inset-0 z-[105]" onClick={() => setShowCustomerSuggestions(false)} />
+              )}
             </div>
           </div>
           {customerDebt > 0 && (

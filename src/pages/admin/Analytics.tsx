@@ -23,7 +23,7 @@ declare module 'jspdf' {
 }
 
 export default function Analytics() {
-  const { storeSettings, loadAnalyticsData } = useStore();
+  const { storeSettings, loadAnalyticsData, purchaseInvoices } = useStore();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | 'thisMonth' | 'thisYear' | 'all'>('30d');
@@ -109,12 +109,15 @@ export default function Analytics() {
       .sort((a, b) => b.total - a.total)
       .slice(0, 10);
 
+    const procurementCost = purchaseInvoices.reduce((sum, inv) => sum + inv.total, 0);
+
     return { 
       revenue, cost, profit, margin, 
       orderCount: orders.filter(o => o.type === 'sale').length,
       topProductsByQty, 
       topProductsByProfit, 
-      topCustomers 
+      topCustomers,
+      procurementCost
     };
   }, [orders]);
 
@@ -264,6 +267,13 @@ export default function Analytics() {
           value={stats.orderCount} 
           icon={Package} 
           color="slate" 
+        />
+        <StatCard 
+          title="تكلفة المشتريات" 
+          value={stats.procurementCost} 
+          unit={storeSettings.currency}
+          icon={DollarSign} 
+          color="amber" 
         />
       </div>
 
