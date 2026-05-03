@@ -9,6 +9,7 @@ export default function Suppliers() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchQueryInvoices, setSearchQueryInvoices] = useState('');
   const [showSupplierModal, setShowSupplierModal] = useState(false);
+  const [editingSupplier, setEditingSupplier] = useState<any>(null);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [selectedSupplierProfile, setSelectedSupplierProfile] = useState<any>(null);
   const [showSupplierProfile, setShowSupplierProfile] = useState(false);

@@ -776,7 +776,6 @@ export const useStore = create<CashierStore>((set, get) => ({
   },
 
   paySupplierDebt: async (supplierId, amount) => {
-    const state = get();
     // We'll create a special purchase invoice for payment (type or negative total? no, let's just add to paid_amount of oldest invoices)
     // Actually, a cleaner way is to have a payments table. 
     // But for now, we'll find invoices with debt for this supplier and update them.
