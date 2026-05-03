@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useStore } from '../../store/useStore';
 import type { PurchaseItem } from '../../store/useStore';
-import { Users, Search, Plus, Edit2, Trash2, Phone, MapPin, Calendar, ShoppingCart, FileText, X, ChevronDown } from 'lucide-react';
+import { Users, Search, Plus, Edit2, Trash2, Phone, MapPin, Calendar, ShoppingCart, FileText, X, ChevronDown, Printer } from 'lucide-react';
 
 export default function Suppliers() {
   const { suppliers, addSupplier, updateSupplier, deleteSupplier, storeSettings, purchaseInvoices, addPurchaseInvoice, products } = useStore();
   const [activeTab, setActiveTab] = useState<'suppliers' | 'invoices'>('suppliers');
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchQueryInvoices, setSearchQueryInvoices] = useState('');
   const [showSupplierModal, setShowSupplierModal] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<any>(null);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
@@ -24,6 +25,16 @@ export default function Suppliers() {
   const filteredSuppliers = suppliers.filter(s =>
     s.name.includes(searchQuery) || (s.phone && s.phone.includes(searchQuery))
   );
+
+  const filteredInvoices = purchaseInvoices.filter(inv => {
+    const supplier = suppliers.find(s => s.id === inv.supplier_id);
+    const query = searchQueryInvoices.toLowerCase();
+    return (
+      inv.invoice_number.toLowerCase().includes(query) ||
+      (supplier?.name.toLowerCase().includes(query)) ||
+      (supplier?.phone && supplier.phone.includes(query))
+    );
+  });
 
   const handleSupplierSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,6 +96,114 @@ export default function Suppliers() {
       if (prod) updated[idx].purchase_price = String(prod.purchase_price || prod.average_purchase_price || '');
     }
     setInvItems(updated);
+  };
+
+  const printPurchaseInvoice = (inv: any) => {
+    const supplier = suppliers.find(s => s.id === inv.supplier_id);
+    const itemsHtml = (inv.items || []).map((item: any, index: number) => {
+      const product = products.find(p => p.id === item.product_id);
+      return `
+        <tr>
+          <td style="padding:10px 4px;border-bottom:1px solid #eee;text-align:center;">${index + 1}</td>
+          <td style="padding:10px 4px;border-bottom:1px solid #eee;font-weight:bold;">${product?.name || 'منتج غير معروف'}</td>
+          <td style="padding:10px 4px;border-bottom:1px solid #eee;text-align:center;">${item.quantity}</td>
+          <td style="padding:10px 4px;border-bottom:1px solid #eee;text-align:center;">${item.purchase_price.toFixed(2)}</td>
+          <td style="padding:10px 4px;border-bottom:1px solid #eee;text-align:left;font-weight:black;">${(item.purchase_price * item.quantity).toFixed(2)}</td>
+        </tr>
+      `;
+    }).join('');
+
+    const html = `<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8"/>
+<title>فاتورة مشتريات #${inv.invoice_number}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box;font-family:'Cairo', sans-serif;}
+  body{background:#fff;color:#1e293b;padding:0;margin:0;}
+  .invoice-container{width:148mm;min-height:210mm;margin:0 auto;padding:12mm;position:relative;display:flex;flex-direction:column;}
+  
+  .header-main{display:flex;justify-content:space-between;align-items:center;border-bottom:4px solid #1e293b;padding-bottom:15px;margin-bottom:20px;}
+  .store-identity{display:flex;align-items:center;gap:15px;}
+  .logo{width:70px;height:70px;object-fit:contain;border-radius:12px;}
+  .store-name{font-size:24px;font-weight:900;color:#1e293b;}
+  .store-details{font-size:11px;color:#64748b;margin-top:5px;line-height:1.5;}
+  
+  .invoice-title-badge{background:#1e293b;color:#fff;padding:8px 20px;border-radius:8px;font-weight:900;font-size:18px;}
+  
+  .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:25px;background:#f8fafc;padding:15px;border-radius:12px;border:1px solid #e2e8f0;}
+  .info-item{font-size:13px;display:flex;gap:8px;}
+  .info-item strong{color:#64748b;white-space:nowrap;}
+  .info-item span{color:#1e293b;font-weight:700;}
+  
+  table{width:100%;border-collapse:collapse;margin-bottom:20px;}
+  thead th{background:#f1f5f9;color:#475569;font-size:13px;padding:12px 8px;text-align:center;border-bottom:2px solid #cbd5e1;}
+  thead th:nth-child(2){text-align:right;}
+  thead th:last-child{text-align:left;}
+  
+  .summary-section{margin-right:auto;width:60%;margin-top:auto;}
+  .summary-row{display:flex;justify-content:space-between;padding:8px 0;font-size:14px;border-bottom:1px solid #f1f5f9;}
+  .summary-row.total{border-top:2px solid #1e293b;border-bottom:none;margin-top:5px;font-size:20px;font-weight:900;}
+  
+  .footer{text-align:center;margin-top:30px;padding-top:15px;border-top:1px dashed #cbd5e1;font-size:12px;color:#94a3b8;}
+  
+  @media print{
+    @page{size:A5;margin:0;}
+    body{-webkit-print-color-adjust:exact;}
+    .invoice-container{width:148mm;height:210mm;padding:10mm;}
+  }
+</style>
+</head>
+<body>
+<div class="invoice-container">
+  <div class="header-main">
+    <div class="store-identity">
+      <img class="logo" src="${storeSettings.logo}" onerror="this.style.display='none'" />
+      <div>
+        <div class="store-name">${storeSettings.name}</div>
+        <div class="store-details">${storeSettings.address} | ${storeSettings.phone}</div>
+      </div>
+    </div>
+    <div class="invoice-title-badge">فاتورة مشتريات</div>
+  </div>
+
+  <div class="info-grid">
+    <div class="info-item"><strong>المورد:</strong> <span>${supplier?.name || 'مورد محذوف'}</span></div>
+    <div class="info-item"><strong>رقم الهاتف:</strong> <span dir="ltr">${supplier?.phone || '—'}</span></div>
+    <div class="info-item"><strong>رقم الفاتورة:</strong> <span>#${inv.invoice_number}</span></div>
+    <div class="info-item"><strong>التاريخ:</strong> <span>${new Date(inv.created_at).toLocaleString('ar-SA')}</span></div>
+  </div>
+
+  <table>
+    <thead><tr>
+      <th style="width:40px">#</th>
+      <th style="text-align:right">المنتج</th>
+      <th style="width:60px">الكمية</th>
+      <th style="width:80px">سعر الشراء</th>
+      <th style="width:100px;text-align:left">الإجمالي</th>
+    </tr></thead>
+    <tbody>${itemsHtml}</tbody>
+  </table>
+
+  <div class="summary-section">
+    <div class="summary-row total"><span>إجمالي الفاتورة:</span><span>${inv.total.toFixed(2)} ${storeSettings.currency}</span></div>
+    <div class="summary-row" style="color: #059669; font-weight: bold;"><span>المبلغ المدفوع:</span><span>${inv.paid_amount.toFixed(2)} ${storeSettings.currency}</span></div>
+    ${inv.total - inv.paid_amount > 0 ? `
+      <div class="summary-row" style="color: #dc2626; font-weight: bold;"><span>المتبقي للمورد:</span><span>${(inv.total - inv.paid_amount).toFixed(2)} ${storeSettings.currency}</span></div>
+    ` : ''}
+  </div>
+
+  <div class="footer">نظام الكاشير المتقدم - إدارة المشتريات والمخازن</div>
+</div>
+<script>window.onload=()=>{setTimeout(()=>{window.print();window.onafterprint=()=>window.close();},500);}<\/script>
+</body></html>`;
+
+    const pw = window.open('', '_blank', 'width=800,height=1000');
+    if (pw) {
+      pw.document.write(html);
+      pw.document.close();
+    }
   };
 
   const tc = storeSettings.themeColor;
@@ -198,18 +317,31 @@ export default function Suppliers() {
       {/* ── Invoices Tab ── */}
       {activeTab === 'invoices' && (
         <div className="space-y-4">
-          {purchaseInvoices.length === 0 ? (
+          <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 mb-6">
+            <div className="relative">
+              <Search className="absolute right-4 top-3.5 text-slate-400" size={20} />
+              <input
+                type="text"
+                placeholder="ابحث برقم الفاتورة أو اسم المورد أو هاتفه..."
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3 pr-12 pl-4 focus:outline-none focus:ring-2 transition text-slate-700"
+                value={searchQueryInvoices}
+                onChange={(e) => setSearchQueryInvoices(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {filteredInvoices.length === 0 ? (
             <div className="py-20 text-center text-slate-400 bg-white rounded-3xl border border-slate-100 shadow-sm">
               <ShoppingCart size={48} className="mx-auto mb-4 opacity-50" />
               <p className="text-xl font-bold mb-2">لا توجد فواتير مشتريات</p>
               <p className="text-sm">اضغط على "فاتورة مشتريات جديدة" لإنشاء أول فاتورة.</p>
             </div>
           ) : (
-            purchaseInvoices.map((inv) => {
+            filteredInvoices.map((inv) => {
               const supplier = suppliers.find(s => s.id === inv.supplier_id);
               const remaining = inv.total - inv.paid_amount;
               return (
-                <div key={inv.id} className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition">
+                <div key={inv.id} className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition group">
                   <div className="flex justify-between items-start">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ backgroundColor: tc + '20' }}>
@@ -221,10 +353,19 @@ export default function Suppliers() {
                         <p className="text-slate-400 text-xs mt-1">{new Date(inv.created_at).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-black text-slate-800 text-xl">{inv.total.toLocaleString()} {storeSettings.currency}</p>
-                      <p className="text-sm font-bold text-emerald-600 mt-1">مدفوع: {inv.paid_amount.toLocaleString()}</p>
-                      {remaining > 0 && <p className="text-sm font-bold text-red-500">متبقي: {remaining.toLocaleString()}</p>}
+                    <div className="flex gap-6 items-start">
+                      <div className="text-right">
+                        <p className="font-black text-slate-800 text-xl">{inv.total.toLocaleString()} {storeSettings.currency}</p>
+                        <p className="text-sm font-bold text-emerald-600 mt-1">مدفوع: {inv.paid_amount.toLocaleString()}</p>
+                        {remaining > 0 && <p className="text-sm font-bold text-red-500">متبقي: {remaining.toLocaleString()}</p>}
+                      </div>
+                      <button
+                        onClick={() => printPurchaseInvoice(inv)}
+                        className="p-3 bg-slate-50 text-slate-600 rounded-2xl hover:bg-slate-100 transition shadow-sm opacity-0 group-hover:opacity-100"
+                        title="طباعة الفاتورة"
+                      >
+                        <Printer size={20} />
+                      </button>
                     </div>
                   </div>
                 </div>
