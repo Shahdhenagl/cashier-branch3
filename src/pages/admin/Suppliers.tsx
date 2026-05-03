@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../../store/useStore';
 import type { PurchaseItem } from '../../store/useStore';
-import { Users, Search, Plus, Edit2, Trash2, Phone, MapPin, Calendar, ShoppingCart, FileText, X, ChevronDown, Printer } from 'lucide-react';
+import { Users, Search, Plus, Edit2, Trash2, Phone, MapPin, Calendar, ShoppingCart, FileText, X, ChevronDown, Printer, Eye } from 'lucide-react';
 
 export default function Suppliers() {
   const { suppliers, addSupplier, updateSupplier, deleteSupplier, storeSettings, purchaseInvoices, addPurchaseInvoice, products } = useStore();
@@ -9,9 +9,12 @@ export default function Suppliers() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchQueryInvoices, setSearchQueryInvoices] = useState('');
   const [showSupplierModal, setShowSupplierModal] = useState(false);
-  const [editingSupplier, setEditingSupplier] = useState<any>(null);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [selectedSupplierProfile, setSelectedSupplierProfile] = useState<any>(null);
+  const [showSupplierProfile, setShowSupplierProfile] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isPayingDebt, setIsPayingDebt] = useState(false);
+  const [debtAmount, setDebtAmount] = useState('');
 
   const [formData, setFormData] = useState({ name: '', phone: '', address: '' });
 
@@ -274,35 +277,49 @@ export default function Suppliers() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredSuppliers.map((supplier) => (
-              <div key={supplier.id} className="bg-white rounded-3xl p-6 shadow-sm hover:shadow-xl transition-all border border-slate-100 group relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-slate-100 to-transparent rounded-bl-full opacity-50 group-hover:scale-150 transition-transform duration-500" />
-                <div className="flex justify-between items-start mb-4">
-                  <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center border border-slate-100 shadow-inner">
-                    <Users size={28} style={{ color: tc }} />
+            {filteredSuppliers.map((supplier) => {
+              const supplierInvoices = purchaseInvoices.filter(inv => inv.supplier_id === supplier.id);
+              const totalDebt = supplierInvoices.reduce((sum, inv) => sum + (inv.total - inv.paid_amount), 0);
+              return (
+                <div key={supplier.id} className="bg-white rounded-3xl p-6 shadow-sm hover:shadow-xl transition-all border border-slate-100 group relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-slate-100 to-transparent rounded-bl-full opacity-50 group-hover:scale-150 transition-transform duration-500" />
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center border border-slate-100 shadow-inner">
+                      <Users size={28} style={{ color: tc }} />
+                    </div>
+                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => { setSelectedSupplierProfile(supplier); setShowSupplierProfile(true); }}
+                        className="p-2 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100 transition"
+                        title="ملف المورد"
+                      ><Eye size={16} /></button>
+                      <button
+                        onClick={() => { setEditingSupplier(supplier); setFormData({ name: supplier.name, phone: supplier.phone || '', address: supplier.address || '' }); setShowSupplierModal(true); }}
+                        className="p-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition"
+                      ><Edit2 size={16} /></button>
+                      <button
+                        onClick={() => { if (confirm('هل أنت متأكد من حذف هذا المورد؟')) deleteSupplier(supplier.id); }}
+                        className="p-2 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition"
+                      ><Trash2 size={16} /></button>
+                    </div>
                   </div>
-                  <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={() => { setEditingSupplier(supplier); setFormData({ name: supplier.name, phone: supplier.phone || '', address: supplier.address || '' }); setShowSupplierModal(true); }}
-                      className="p-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition"
-                    ><Edit2 size={16} /></button>
-                    <button
-                      onClick={() => { if (confirm('هل أنت متأكد من حذف هذا المورد؟')) deleteSupplier(supplier.id); }}
-                      className="p-2 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition"
-                    ><Trash2 size={16} /></button>
+                  <h3 className="text-xl font-black text-slate-800 mb-2">{supplier.name}</h3>
+                  {totalDebt > 0 && (
+                    <div className="mb-4 inline-block bg-red-50 text-red-600 px-3 py-1 rounded-lg text-xs font-bold border border-red-100">
+                      مديونية: {totalDebt.toLocaleString()} {storeSettings.currency}
+                    </div>
+                  )}
+                  <div className="space-y-3 text-slate-600 text-sm font-medium">
+                    <div className="flex items-center gap-3"><Phone size={16} className="text-slate-400" /><span dir="ltr" className="font-mono">{supplier.phone || 'لا يوجد هاتف'}</span></div>
+                    <div className="flex items-center gap-3"><MapPin size={16} className="text-slate-400" /><span>{supplier.address || 'لا يوجد عنوان'}</span></div>
+                    <div className="flex items-center gap-3 pt-3 border-t border-slate-50">
+                      <Calendar size={16} className="text-slate-400" />
+                      <span className="text-xs text-slate-400">أضيف في: {new Date(supplier.created_at).toLocaleDateString('ar-SA')}</span>
+                    </div>
                   </div>
                 </div>
-                <h3 className="text-xl font-black text-slate-800 mb-4">{supplier.name}</h3>
-                <div className="space-y-3 text-slate-600 text-sm font-medium">
-                  <div className="flex items-center gap-3"><Phone size={16} className="text-slate-400" /><span dir="ltr" className="font-mono">{supplier.phone || 'لا يوجد هاتف'}</span></div>
-                  <div className="flex items-center gap-3"><MapPin size={16} className="text-slate-400" /><span>{supplier.address || 'لا يوجد عنوان'}</span></div>
-                  <div className="flex items-center gap-3 pt-3 border-t border-slate-50">
-                    <Calendar size={16} className="text-slate-400" />
-                    <span className="text-xs text-slate-400">أضيف في: {new Date(supplier.created_at).toLocaleDateString('ar-SA')}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
             {filteredSuppliers.length === 0 && (
               <div className="col-span-full py-16 text-center text-slate-400 bg-white rounded-3xl border border-slate-100 shadow-sm">
                 <Users size={48} className="mx-auto mb-4 opacity-50" />
@@ -497,6 +514,133 @@ export default function Suppliers() {
           </div>
         </div>
       )}
+
+      {/* ── Supplier Profile Modal ── */}
+      {showSupplierProfile && selectedSupplierProfile && (() => {
+        const supplierInvoices = purchaseInvoices.filter(inv => inv.supplier_id === selectedSupplierProfile.id);
+        const totalPurchases = supplierInvoices.reduce((sum, inv) => sum + inv.total, 0);
+        const totalPaid = supplierInvoices.reduce((sum, inv) => sum + inv.paid_amount, 0);
+        const totalDebt = totalPurchases - totalPaid;
+
+        const handlePayDebt = async () => {
+          const amount = parseFloat(debtAmount);
+          if (isNaN(amount) || amount <= 0) return alert('أدخل مبلغاً صحيحاً');
+          if (amount > totalDebt) return alert('المبلغ المدخل أكبر من المديونية الحالية');
+          
+          try {
+            setIsPayingDebt(true);
+            await useStore.getState().paySupplierDebt(selectedSupplierProfile.id, amount);
+            alert('تم تسجيل الدفعة بنجاح');
+            setDebtAmount('');
+          } catch (e) {
+            alert('حدث خطأ أثناء الدفع');
+          } finally {
+            setIsPayingDebt(false);
+          }
+        };
+
+        return (
+          <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white rounded-[40px] shadow-2xl w-full max-w-4xl overflow-hidden border border-slate-100 flex flex-col max-h-[90vh]">
+              <div className="p-8 border-b border-slate-100 flex justify-between items-start bg-white">
+                <div className="flex gap-6 items-center">
+                  <div style={{ backgroundColor: tc }} className="w-16 h-16 rounded-3xl flex items-center justify-center text-white text-2xl font-black">
+                    {selectedSupplierProfile.name.charAt(0)}
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-black text-slate-800">{selectedSupplierProfile.name}</h2>
+                    <p className="text-slate-500 font-bold mt-1 flex items-center gap-2"><Phone size={14} /> {selectedSupplierProfile.phone}</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowSupplierProfile(false)} className="p-2 rounded-2xl hover:bg-slate-100 transition"><X size={24} /></button>
+              </div>
+
+              <div className="p-8 bg-slate-50 flex-1 overflow-y-auto">
+                {/* Stats */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                  <div className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm">
+                    <p className="text-xs font-bold text-slate-400 mb-1">إجمالي المشتريات</p>
+                    <p className="text-2xl font-black text-slate-800">{totalPurchases.toLocaleString()} {storeSettings.currency}</p>
+                  </div>
+                  <div className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm">
+                    <p className="text-xs font-bold text-slate-400 mb-1">إجمالي المدفوع</p>
+                    <p className="text-2xl font-black text-emerald-600">{totalPaid.toLocaleString()} {storeSettings.currency}</p>
+                  </div>
+                  <div className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm relative overflow-hidden">
+                    <div className="relative z-10">
+                      <p className="text-xs font-bold text-slate-400 mb-1">المديونية المتبقية</p>
+                      <p className={`text-2xl font-black ${totalDebt > 0 ? 'text-red-600' : 'text-emerald-600'}`}>{totalDebt.toLocaleString()} {storeSettings.currency}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Pay Debt Section */}
+                {totalDebt > 0 && (
+                  <div className="bg-white p-6 rounded-[32px] border border-red-100 shadow-sm mb-8 flex items-center gap-4">
+                    <div className="flex-1">
+                      <h3 className="font-black text-slate-800 mb-1">تسديد مديونية للمورد</h3>
+                      <p className="text-xs text-slate-500">قم بإدخال المبلغ الذي دفعته للمورد الآن لتسويته من الحساب</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <input 
+                        type="number" 
+                        placeholder="المبلغ" 
+                        value={debtAmount} 
+                        onChange={e => setDebtAmount(e.target.value)}
+                        className="w-32 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 font-bold"
+                      />
+                      <button 
+                        onClick={handlePayDebt}
+                        disabled={isPayingDebt}
+                        className="bg-emerald-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-emerald-700 transition disabled:opacity-50"
+                      >
+                        {isPayingDebt ? 'جاري...' : 'تسديد'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Transactions Table */}
+                <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden">
+                  <div className="p-6 border-b border-slate-50">
+                    <h3 className="font-black text-slate-800">سجل المعاملات والفواتير</h3>
+                  </div>
+                  <table className="w-full text-right text-sm">
+                    <thead className="bg-slate-50 text-slate-400 font-bold uppercase tracking-wider">
+                      <tr>
+                        <th className="p-4">رقم الفاتورة</th>
+                        <th className="p-4">التاريخ</th>
+                        <th className="p-4 text-center">الإجمالي</th>
+                        <th className="p-4 text-center">المدفوع</th>
+                        <th className="p-4 text-center">المتبقي</th>
+                        <th className="p-4 text-left">إجراءات</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {supplierInvoices.length === 0 ? (
+                        <tr><td colSpan={6} className="p-10 text-center text-slate-400 font-bold">لا يوجد فواتير سابقة</td></tr>
+                      ) : (
+                        supplierInvoices.map(inv => (
+                          <tr key={inv.id} className="hover:bg-slate-50 transition">
+                            <td className="p-4 font-mono font-bold text-slate-800">{inv.invoice_number}</td>
+                            <td className="p-4 text-xs font-medium">{new Date(inv.created_at).toLocaleDateString('ar-SA')}</td>
+                            <td className="p-4 text-center font-bold">{inv.total.toLocaleString()}</td>
+                            <td className="p-4 text-center font-bold text-emerald-600">{inv.paid_amount.toLocaleString()}</td>
+                            <td className="p-4 text-center font-bold text-red-600">{(inv.total - inv.paid_amount).toLocaleString()}</td>
+                            <td className="p-4 text-left">
+                              <button onClick={() => printPurchaseInvoice(inv)} className="p-2 text-slate-400 hover:text-slate-800 transition"><Printer size={16} /></button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

@@ -135,6 +135,7 @@ interface CashierStore {
   // Purchases
   loadPurchaseInvoices: () => Promise<void>;
   addPurchaseInvoice: (invoice: Omit<PurchaseInvoice, 'id' | 'created_at' | 'items'>, items: PurchaseItem[]) => Promise<void>;
+  paySupplierDebt: (supplierId: string, amount: number) => Promise<void>;
 
   // Auth
   isAdminAuthenticated: boolean;
@@ -686,7 +687,11 @@ export const useStore = create<CashierStore>((set, get) => ({
     try {
       const { data } = await supabase.from('purchase_invoices').select('*, purchase_items(*)').order('created_at', { ascending: false });
       if (data) {
-        set({ purchaseInvoices: data as unknown as PurchaseInvoice[] });
+        const mapped = (data as any[]).map(inv => ({
+          ...inv,
+          items: inv.purchase_items || []
+        }));
+        set({ purchaseInvoices: mapped as PurchaseInvoice[] });
       }
     } catch (e) {
       console.error(e);
@@ -768,5 +773,35 @@ export const useStore = create<CashierStore>((set, get) => ({
       purchaseInvoices: [completeInvoice, ...state.purchaseInvoices],
       products: updatedProducts
     });
+  },
+
+  paySupplierDebt: async (supplierId, amount) => {
+    const state = get();
+    // We'll create a special purchase invoice for payment (type or negative total? no, let's just add to paid_amount of oldest invoices)
+    // Actually, a cleaner way is to have a payments table. 
+    // But for now, we'll find invoices with debt for this supplier and update them.
+    
+    let remainingAmount = amount;
+    const { data: invoices } = await supabase
+      .from('purchase_invoices')
+      .select('*')
+      .eq('supplier_id', supplierId)
+      .order('created_at', { ascending: true });
+
+    if (invoices) {
+      for (const inv of invoices) {
+        if (remainingAmount <= 0) break;
+        const debt = inv.total - inv.paid_amount;
+        if (debt > 0) {
+          const payment = Math.min(remainingAmount, debt);
+          const newPaid = inv.paid_amount + payment;
+          await supabase.from('purchase_invoices').update({ paid_amount: newPaid }).eq('id', inv.id);
+          remainingAmount -= payment;
+        }
+      }
+    }
+
+    // Refresh data
+    await get().loadPurchaseInvoices();
   },
 }));
