@@ -27,6 +27,12 @@ export default function Suppliers() {
   ]);
   const [invPaymentMethod, setInvPaymentMethod] = useState<'cash' | 'visa' | 'wallet' | 'instapay'>('cash');
 
+  // Quick Add Product State
+  const [showQuickProductModal, setShowQuickProductModal] = useState(false);
+  const [quickProductIndex, setQuickProductIndex] = useState<number | null>(null);
+  const [quickProductData, setQuickProductData] = useState({ name: '', category_id: '', sale_price: '', barcode: '' });
+  const { categories, addProduct } = useStore();
+
   const filteredSuppliers = suppliers.filter(s =>
     s.name.includes(searchQuery) || (s.phone && s.phone.includes(searchQuery))
   );
@@ -97,12 +103,55 @@ export default function Suppliers() {
   const addInvRow = () => setInvItems([...invItems, { product_id: '', quantity: '1', purchase_price: '' }]);
   const removeInvRow = (idx: number) => setInvItems(invItems.filter((_, i) => i !== idx));
   const updateInvRow = (idx: number, field: string, value: string) => {
+    if (field === 'product_id' && value === 'NEW_PRODUCT') {
+      setQuickProductIndex(idx);
+      setQuickProductData({ ...quickProductData, barcode: `P-${Date.now().toString().slice(-6)}` });
+      setShowQuickProductModal(true);
+      return;
+    }
     const updated = invItems.map((item, i) => i === idx ? { ...item, [field]: value } : item);
     if (field === 'product_id' && value) {
       const prod = products.find(p => p.id === value);
       if (prod) updated[idx].purchase_price = String(prod.purchase_price || prod.average_purchase_price || '');
     }
     setInvItems(updated);
+  };
+
+  const handleQuickProductSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickProductData.name || !quickProductData.category_id) return alert('أكمل بيانات المنتج');
+    
+    try {
+      setIsSaving(true);
+      const newProd = {
+        name: quickProductData.name,
+        barcode: quickProductData.barcode,
+        category_id: quickProductData.category_id,
+        sale_price: parseFloat(quickProductData.sale_price) || 0,
+        purchase_price: 0,
+        stock_quantity: 0,
+        average_purchase_price: 0
+      };
+      
+      await addProduct(newProd);
+      
+      // Wait for store update (next tick) or find the new product
+      const allProducts = useStore.getState().products;
+      const created = allProducts.find(p => p.barcode === quickProductData.barcode);
+      
+      if (created && quickProductIndex !== null) {
+        const updated = [...invItems];
+        updated[quickProductIndex] = { ...updated[quickProductIndex], product_id: created.id };
+        setInvItems(updated);
+      }
+      
+      setShowQuickProductModal(false);
+      setQuickProductData({ name: '', category_id: '', sale_price: '', barcode: '' });
+    } catch (err) {
+      alert('خطأ في إضافة المنتج');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const printPurchaseInvoice = (inv: any) => {
@@ -463,6 +512,7 @@ export default function Suppliers() {
                         <div className="relative flex-1">
                           <select value={item.product_id} onChange={e => updateInvRow(idx, 'product_id', e.target.value)} className="w-full appearance-none bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 font-medium">
                             <option value="">-- المنتج --</option>
+                            <option value="NEW_PRODUCT" className="text-indigo-600 font-bold">+ إضافة منتج جديد...</option>
                             {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                           </select>
                         </div>
@@ -656,6 +706,43 @@ export default function Suppliers() {
           </div>
         );
       })()}
+      {/* ── Quick Add Product Modal ── */}
+      {showQuickProductModal && (
+        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-sm overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
+            <div className="p-6 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+              <h3 className="font-black text-slate-800">إضافة منتج سريع</h3>
+              <button onClick={() => setShowQuickProductModal(false)} className="p-2 hover:bg-slate-200 rounded-xl transition"><X size={18} /></button>
+            </div>
+            <form onSubmit={handleQuickProductSubmit} className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">اسم المنتج</label>
+                <input required type="text" value={quickProductData.name} onChange={e => setQuickProductData({...quickProductData, name: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-bold" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">التصنيف</label>
+                  <select required value={quickProductData.category_id} onChange={e => setQuickProductData({...quickProductData, category_id: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-sm">
+                    <option value="">-- اختر --</option>
+                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">سعر البيع</label>
+                  <input type="number" step="0.01" value={quickProductData.sale_price} onChange={e => setQuickProductData({...quickProductData, sale_price: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-bold" placeholder="0.00" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">الباركود (تلقائي)</label>
+                <input readOnly type="text" value={quickProductData.barcode} className="w-full bg-slate-100 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-400 font-mono text-xs" />
+              </div>
+              <button type="submit" disabled={isSaving} className="w-full bg-indigo-600 text-white py-3.5 rounded-2xl font-black shadow-lg hover:bg-indigo-700 transition disabled:opacity-50">
+                {isSaving ? 'جاري الحفظ...' : 'تأكيد وإضافة للفاتورة'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
