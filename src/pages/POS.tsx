@@ -184,7 +184,7 @@ export default function POS() {
       <div class="payment-status status-paid">✓ تم سداد الفاتورة بالكامل</div>
     `}
     <div class="payment-method-badge">
-      ${{ cash: '💵 كاش', visa: '💳 فيزا / بطاقة', wallet: '📱 محفظة إلكترونية', instapay: '⚡ انستاباي' }[orderDetails.paymentMethod] || '💵 كاش'}
+      ${( { cash: '💵 كاش', visa: '💳 فيزا / بطاقة', wallet: '📱 محفظة إلكترونية', instapay: '⚡ انستاباي' } as any)[orderDetails.paymentMethod] || '💵 كاش'}
     </div>
   </div>
 
