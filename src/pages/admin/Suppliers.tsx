@@ -25,6 +25,7 @@ export default function Suppliers() {
   const [invItems, setInvItems] = useState<{ product_id: string; quantity: string; purchase_price: string }[]>([
     { product_id: '', quantity: '1', purchase_price: '' }
   ]);
+  const [invPaymentMethod, setInvPaymentMethod] = useState<'cash' | 'visa' | 'wallet' | 'instapay'>('cash');
 
   const filteredSuppliers = suppliers.filter(s =>
     s.name.includes(searchQuery) || (s.phone && s.phone.includes(searchQuery))
@@ -76,12 +77,14 @@ export default function Suppliers() {
         supplier_id: invSupplierId,
         total: invTotal,
         paid_amount: parseFloat(invPaidAmount) || 0,
+        payment_method: invPaymentMethod,
       }, items);
 
       alert('تم حفظ الفاتورة بنجاح وتحديث المخزن');
       setShowInvoiceModal(false);
       setInvSupplierId('');
       setInvPaidAmount('');
+      setInvPaymentMethod('cash');
       setInvItems([{ product_id: '', quantity: '1', purchase_price: '' }]);
       setActiveTab('invoices');
     } catch (error: any) {
@@ -484,9 +487,20 @@ export default function Suppliers() {
                 </div>
 
                 {/* Paid Amount */}
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">المبلغ المدفوع للمورد</label>
-                  <input type="number" min="0" step="0.01" placeholder={`الإجمالي: ${invTotal.toLocaleString()} ${storeSettings.currency}`} value={invPaidAmount} onChange={e => setInvPaidAmount(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition font-medium" />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">المبلغ المدفوع للمورد</label>
+                    <input type="number" min="0" step="0.01" placeholder="0.00" value={invPaidAmount} onChange={e => setInvPaidAmount(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition font-medium" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">طريقة الدفع</label>
+                    <select value={invPaymentMethod} onChange={e => setInvPaymentMethod(e.target.value as any)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition font-bold">
+                      <option value="cash">💵 كاش</option>
+                      <option value="visa">💳 فيزا</option>
+                      <option value="wallet">📱 محفظة</option>
+                      <option value="instapay">⚡ انستاباي</option>
+                    </select>
+                  </div>
                 </div>
 
                 {/* Summary */}

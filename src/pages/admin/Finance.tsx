@@ -1,43 +1,158 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useStore, type Expense } from '../../store/useStore';
-import { Wallet, Plus, Trash2, Search, FileText, ArrowUp, ArrowDown, Calendar, Edit3, X, Download } from 'lucide-react';
+import { 
+  Wallet, Plus, Trash2, Search, FileText, ArrowUp, ArrowDown, 
+  Calendar, Edit3, X, Download, TrendingUp, CreditCard, Smartphone, Zap, 
+  ArrowRightLeft, Landmark
+} from 'lucide-react';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 export default function Finance() {
-  const { expenses, orders, storeSettings, addExpense, updateExpense, deleteExpense, purchaseInvoices } = useStore();
-  const [searchQuery, setSearchQuery] = useState('');
+  const { 
+    expenses, orders, storeSettings, addExpense, updateExpense, 
+    deleteExpense, purchaseInvoices 
+  } = useStore();
+  
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [showModal, setShowModal] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
-  const [formData, setFormData] = useState({ category: 'عام', amount: '', note: '' });
+  const [formData, setFormData] = useState({ 
+    category: 'عام', 
+    amount: '', 
+    note: '', 
+    payment_method: 'cash' as 'cash' | 'visa' | 'wallet' | 'instapay' 
+  });
 
-  // Filter expenses
-  const filteredExpenses = expenses.filter(e => 
-    e.category.includes(searchQuery) || e.note.includes(searchQuery)
-  );
+  // --- Calculations ---
 
-  // Financial Calculations
-  const totalSales = orders.filter(o => o.type === 'sale').reduce((sum, o) => sum + o.paid_amount, 0);
-  const totalPayments = orders.filter(o => o.type === 'payment').reduce((sum, o) => sum + o.paid_amount, 0);
-  
-  const totalReturnsValue = orders.reduce((sum, o) => {
+  const initialBalance = storeSettings.initial_balance || 0;
+
+  // Helper to get date string without time
+  const getDateStr = (date: string | Date) => new Date(date).toISOString().split('T')[0];
+
+  // 1. Transactions before selected date (for Opening Balance)
+  const totalsBefore = useMemo(() => {
+    const selDate = new Date(selectedDate);
+    
+    const ordersIn = orders
+      .filter(o => new Date(o.date) < selDate)
+      .reduce((sum, o) => sum + o.paid_amount, 0);
+    
+    const returnsOut = orders
+      .filter(o => new Date(o.date) < selDate)
+      .reduce((sum, o) => sum + o.items.reduce((iSum, item) => iSum + (item.returned_quantity * item.sale_price), 0), 0);
+
+    const expensesOut = expenses
+      .filter(e => new Date(e.date) < selDate)
+      .reduce((sum, e) => sum + e.amount, 0);
+
+    const purchasesOut = purchaseInvoices
+      .filter(inv => new Date(inv.created_at) < selDate)
+      .reduce((sum, inv) => sum + inv.paid_amount, 0);
+
+    return (ordersIn - returnsOut - expensesOut - purchasesOut);
+  }, [orders, expenses, purchaseInvoices, selectedDate]);
+
+  const openingBalance = initialBalance + totalsBefore;
+
+  // 2. Daily Transactions
+  const dailyOrders = orders.filter(o => getDateStr(o.date) === selectedDate);
+  const dailyExpenses = expenses.filter(e => getDateStr(e.date) === selectedDate);
+  const dailyPurchases = purchaseInvoices.filter(inv => getDateStr(inv.created_at) === selectedDate);
+
+  const dailyIncome = dailyOrders.reduce((sum, o) => sum + o.paid_amount, 0);
+  const dailyExpensesTotal = dailyExpenses.reduce((sum, e) => sum + e.amount, 0);
+  const dailyPurchasesTotal = dailyPurchases.reduce((sum, inv) => sum + inv.paid_amount, 0);
+  const dailyReturnsValue = dailyOrders.reduce((sum, o) => {
     return sum + o.items.reduce((iSum, item) => iSum + (item.returned_quantity * item.sale_price), 0);
   }, 0);
 
-  const totalExpensesValue = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const dailyNet = dailyIncome - dailyExpensesTotal - dailyPurchasesTotal - dailyReturnsValue;
+  const closingBalance = openingBalance + dailyNet;
 
-  const totalPurchasesPaid = purchaseInvoices.reduce((sum, inv) => sum + inv.paid_amount, 0);
+  // 3. Payment Method Breakdown (Daily)
+  const getDailyByMethod = (method: string) => {
+    const inc = dailyOrders.filter(o => o.payment_method === method).reduce((sum, o) => sum + o.paid_amount, 0);
+    const outExp = dailyExpenses.filter(e => e.payment_method === method).reduce((sum, e) => sum + e.amount, 0);
+    const outPur = dailyPurchases.filter(inv => inv.payment_method === method).reduce((sum, inv) => sum + inv.paid_amount, 0);
+    return inc - outExp - outPur;
+  };
 
-  const netSafeBalance = (totalSales + totalPayments) - totalReturnsValue - totalExpensesValue - totalPurchasesPaid;
+  const methodsBreakdown = {
+    cash: getDailyByMethod('cash'),
+    visa: getDailyByMethod('visa'),
+    wallet: getDailyByMethod('wallet'),
+    instapay: getDailyByMethod('instapay'),
+  };
+
+  // 4. Combined Transaction List for the table
+  const allDailyTransactions = useMemo(() => {
+    const list: any[] = [];
+    
+    dailyOrders.forEach(o => {
+      list.push({
+        id: o.id,
+        type: o.type === 'sale' ? 'إيراد مبيعات' : 'تحصيل مديونية',
+        amount: o.paid_amount,
+        method: o.payment_method,
+        note: o.customer?.name || 'عميل نقدي',
+        isOut: false,
+        time: new Date(o.date).toLocaleTimeString('ar-SA'),
+        rawDate: o.date
+      });
+    });
+
+    dailyExpenses.forEach(e => {
+      list.push({
+        id: e.id,
+        type: `مصروف: ${e.category}`,
+        amount: e.amount,
+        method: e.payment_method,
+        note: e.note,
+        isOut: true,
+        time: new Date(e.date).toLocaleTimeString('ar-SA'),
+        rawDate: e.date,
+        original: e
+      });
+    });
+
+    dailyPurchases.forEach(inv => {
+      list.push({
+        id: inv.id,
+        type: 'شراء بضاعة',
+        amount: inv.paid_amount,
+        method: inv.payment_method,
+        note: `فاتورة #${inv.invoice_number}`,
+        isOut: true,
+        time: new Date(inv.created_at).toLocaleTimeString('ar-SA'),
+        rawDate: inv.created_at
+      });
+    });
+
+    return list.sort((a, b) => new Date(b.rawDate).getTime() - new Date(a.rawDate).getTime());
+  }, [dailyOrders, dailyExpenses, dailyPurchases]);
+
+  // --- Handlers ---
 
   const handleOpenModal = (expense: Expense | null = null) => {
     if (expense) {
       setEditingExpense(expense);
-      setFormData({ category: expense.category, amount: expense.amount.toString(), note: expense.note });
+      setFormData({ 
+        category: expense.category, 
+        amount: expense.amount.toString(), 
+        note: expense.note,
+        payment_method: expense.payment_method || 'cash'
+      });
     } else {
       setEditingExpense(null);
-      setFormData({ category: 'عام', amount: '', note: '' });
+      setFormData({ 
+        category: 'عام', 
+        amount: '', 
+        note: '',
+        payment_method: 'cash'
+      });
     }
     setShowModal(true);
   };
@@ -50,13 +165,15 @@ export default function Finance() {
       await updateExpense(editingExpense.id, {
         category: formData.category,
         amount: amountNum,
-        note: formData.note
+        note: formData.note,
+        payment_method: formData.payment_method
       });
     } else {
       await addExpense({
         category: formData.category,
         amount: amountNum,
-        note: formData.note
+        note: formData.note,
+        payment_method: formData.payment_method
       });
     }
     setShowModal(false);
@@ -64,251 +181,210 @@ export default function Finance() {
 
   const exportToExcel = () => {
     const wsData = [
-      ['تقرير الخزينة والمصاريف', '', '', ''],
-      ['التاريخ', new Date().toLocaleString('ar-SA'), '', ''],
+      ['تقرير الميزانية اليومية', '', '', ''],
+      ['التاريخ المختار', selectedDate, '', ''],
       [''],
-      ['إجمالي المبيعات (كاش)', totalSales],
-      ['تحصيل مديونيات', totalPayments],
-      ['إجمالي المرتجعات (خارج)', totalReturnsValue],
-      ['إجمالي المصاريف (خارج)', totalExpensesValue],
-      ['صافي الخزينة الحالي', netSafeBalance],
+      ['رصيد أول اليوم', openingBalance],
+      ['إجمالي الداخل (اليوم)', dailyIncome],
+      ['إجمالي الخارج (اليوم)', dailyExpensesTotal + dailyPurchasesTotal + dailyReturnsValue],
+      ['صافي اليوم', dailyNet],
+      ['رصيد الإغلاق', closingBalance],
       [''],
-      ['سجل المصاريف التفصيلي'],
-      ['الفئة', 'المبلغ', 'الملاحظات', 'التاريخ'],
-      ...expenses.map(e => [e.category, e.amount, e.note, new Date(e.date).toLocaleString('ar-SA')])
+      ['تفاصيل طرق الدفع (اليوم)'],
+      ['كاش', methodsBreakdown.cash],
+      ['فيزا', methodsBreakdown.visa],
+      ['محفظة', methodsBreakdown.wallet],
+      ['انستاباي', methodsBreakdown.instapay],
+      [''],
+      ['سجل المعاملات اليومي'],
+      ['الوقت', 'النوع', 'المبلغ', 'الطريقة', 'التفاصيل'],
+      ...allDailyTransactions.map(t => [t.time, t.type, t.amount, t.method, t.note])
     ];
     const ws = XLSX.utils.aoa_to_sheet(wsData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Finance');
-    XLSX.writeFile(wb, `finance_report_${new Date().toLocaleDateString()}.xlsx`);
+    XLSX.writeFile(wb, `daily_report_${selectedDate}.xlsx`);
   };
 
-  const exportToPDF = () => {
-    const doc = new jsPDF('p', 'mm', 'a4');
-    
-    doc.setFont("helvetica", "bold");
-    doc.text("Finance Report - Financial Status", 105, 20, { align: 'center' });
-    
-    const summaryData = [
-      ["Total Sales", `${totalSales} ${storeSettings.currency}`],
-      ["Payments Collected", `${totalPayments} ${storeSettings.currency}`],
-      ["Total Returns", `${totalReturnsValue} ${storeSettings.currency}`],
-      ["Total Expenses", `${totalExpensesValue} ${storeSettings.currency}`],
-      ["Total Purchases Paid", `${totalPurchasesPaid} ${storeSettings.currency}`],
-      ["Net Safe Balance", `${netSafeBalance} ${storeSettings.currency}`],
-    ];
-
-    autoTable(doc, {
-      startY: 30,
-      head: [["Category", "Value"]],
-      body: summaryData,
-      theme: 'striped',
-    });
-
-    const expensesData = expenses.map(e => [
-      e.category,
-      e.amount.toString(),
-      e.note,
-      new Date(e.date).toLocaleDateString('ar-SA')
-    ]);
-
-    const finalY = (doc as any).lastAutoTable?.finalY || 100;
-
-    autoTable(doc, {
-      startY: finalY + 10,
-      head: [["Category", "Amount", "Note", "Date"]],
-      body: expensesData,
-      theme: 'grid',
-    });
-
-    doc.save(`finance_report_${new Date().toLocaleDateString()}.pdf`);
-  };
+  const tc = storeSettings.themeColor;
 
   return (
-    <div className="p-8 max-w-7xl mx-auto" dir="rtl">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+    <div className="p-8 max-w-7xl mx-auto h-[calc(100vh-2rem)] overflow-y-auto" dir="rtl">
+      {/* Header & Date Picker */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 bg-white p-6 rounded-[32px] shadow-sm border border-slate-100">
         <div>
           <h1 className="text-3xl font-black text-slate-800 flex items-center gap-3">
             <div className="p-2 bg-indigo-600 rounded-2xl text-white shadow-lg shadow-indigo-200">
               <Wallet size={28} />
             </div>
-            الخزينة والحسابات
+            الميزانية اليومية
           </h1>
-          <p className="text-slate-500 mt-2 font-medium">مراقبة الدخل، المصاريف، وصافي أرباح الخزينة</p>
-        </div>
-        <div className="flex flex-wrap gap-3">
-          <div className="flex bg-white rounded-xl shadow-sm border border-slate-200 p-1">
-             <button 
-              onClick={exportToPDF}
-              className="flex items-center gap-2 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg text-sm font-bold transition"
-            >
-              <FileText size={16} className="text-red-500" /> PDF
-            </button>
-            <div className="w-px bg-slate-200 my-1 mx-1"></div>
-            <button 
-              onClick={exportToExcel}
-              className="flex items-center gap-2 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg text-sm font-bold transition"
-            >
-              <Download size={16} className="text-emerald-500" /> Excel
-            </button>
-          </div>
-          <button 
-            onClick={() => handleOpenModal()}
-            style={{ backgroundColor: storeSettings.themeColor }}
-            className="flex items-center gap-2 text-white px-6 py-2.5 rounded-xl font-bold hover:opacity-90 transition shadow-lg shadow-indigo-100"
-          >
-            <Plus size={20} /> إضافة عملية
-          </button>
-        </div>
-      </div>
-
-      {/* Financial Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        {/* Incomes Card */}
-        <div className="bg-white p-6 rounded-[32px] shadow-sm border border-slate-100 relative overflow-hidden">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600">
-              <ArrowUp size={28} />
-            </div>
-            <div>
-              <p className="text-slate-400 font-bold text-xs">إجمالي الداخل</p>
-              <p className="text-xs font-black text-emerald-600 uppercase tracking-tighter">(مبيعات + تحصيل)</p>
-            </div>
-          </div>
-          <h3 className="text-3xl font-black text-slate-800">
-            {(totalSales + totalPayments).toLocaleString()} 
-            <span className="text-sm font-normal text-slate-400 mr-2">{storeSettings.currency}</span>
-          </h3>
+          <p className="text-slate-500 mt-2 font-medium">مراقبة حركة الخزينة وتدفق الأموال</p>
         </div>
 
-        {/* Expenses Card */}
-        <div className="bg-white p-6 rounded-[32px] shadow-sm border border-slate-100 relative overflow-hidden">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center text-red-600">
-              <ArrowDown size={28} />
-            </div>
-            <div>
-              <p className="text-slate-400 font-bold text-xs">إجمالي الخارج</p>
-              <p className="text-xs font-black text-red-600 uppercase tracking-tighter">(مرتجعات + مصاريف + مشتريات)</p>
-            </div>
-          </div>
-          <h3 className="text-3xl font-black text-slate-800">
-            {(totalReturnsValue + totalExpensesValue + totalPurchasesPaid).toLocaleString()} 
-            <span className="text-sm font-normal text-slate-400 mr-2">{storeSettings.currency}</span>
-          </h3>
-        </div>
-
-        {/* Balance Card - RESTYLED */}
-        <div className="relative group overflow-hidden rounded-[32px] p-6 shadow-2xl transition-all duration-500 hover:scale-[1.02]">
-           {/* Dynamic Gradient Background */}
-          <div 
-            className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 z-0"
-          />
-          <div 
-            className="absolute top-0 right-0 w-32 h-32 blur-3xl opacity-20 -mr-16 -mt-16 rounded-full"
-            style={{ backgroundColor: storeSettings.themeColor }}
-          />
-          <div 
-            className="absolute bottom-0 left-0 w-32 h-32 blur-3xl opacity-10 -ml-16 -mb-16 rounded-full bg-emerald-500"
-          />
-          
-          <div className="relative z-10 h-full flex flex-col justify-between">
-            <div className="flex justify-between items-start">
-              <div 
-                className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg backdrop-blur-md bg-white/10 border border-white/20"
-              >
-                <Wallet size={24} />
-              </div>
-              <div className="px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-[10px] font-black uppercase tracking-widest animate-pulse">
-                حالة الخزينة: آمنة
-              </div>
-            </div>
-            
-            <div className="mt-8">
-              <p className="text-slate-400 font-bold text-xs mb-1 uppercase tracking-wider">صافي رصيد الخزينة الفعلي</p>
-              <div className="flex items-baseline gap-2">
-                <h3 className="text-4xl font-black text-white tracking-tight">
-                  {netSafeBalance.toLocaleString()}
-                </h3>
-                <span className="text-lg font-bold text-slate-500">{storeSettings.currency}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Table Section */}
-      <div className="bg-white rounded-[32px] shadow-sm border border-slate-100 overflow-hidden">
-        <div className="p-6 border-b border-slate-50 flex flex-col md:flex-row items-center justify-between gap-4 bg-slate-50/30">
-          <div className="relative w-full max-w-md">
-            <Search className="absolute right-4 top-3 text-slate-400" size={18} />
-            <input
-              type="text"
-              placeholder="ابحث في سجل المصاريف..."
-              className="w-full bg-white border border-slate-200 rounded-2xl py-2.5 pr-12 pl-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-sm transition-all"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-3 bg-slate-50 px-4 py-2.5 rounded-2xl border border-slate-200 shadow-inner">
+            <Calendar size={20} className="text-indigo-600" />
+            <input 
+              type="date" 
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="bg-transparent font-black text-slate-700 outline-none"
             />
           </div>
-          <div className="bg-white border border-slate-200 px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-bold text-slate-600 shadow-sm">
-            <Calendar size={16} /> {new Date().toLocaleDateString('ar-SA')}
+          
+          <div className="flex gap-2">
+            <button 
+              onClick={exportToExcel}
+              className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl hover:bg-emerald-100 transition shadow-sm border border-emerald-100"
+              title="تصدير Excel"
+            >
+              <Download size={22} />
+            </button>
+            <button 
+              onClick={() => handleOpenModal()}
+              style={{ backgroundColor: tc }}
+              className="flex items-center gap-2 text-white px-6 py-3 rounded-2xl font-bold hover:opacity-90 transition shadow-lg"
+            >
+              <Plus size={20} /> مصروف جديد
+            </button>
           </div>
+        </div>
+      </div>
+
+      {/* Financial Status Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        {/* Opening Balance */}
+        <div className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm">
+          <p className="text-slate-400 font-bold text-xs mb-1">رصيد الافتتاح</p>
+          <h3 className="text-2xl font-black text-slate-700">
+            {openingBalance.toLocaleString()} <span className="text-sm font-normal opacity-50">{storeSettings.currency}</span>
+          </h3>
+          <div className="mt-2 text-[10px] text-slate-400 font-bold flex items-center gap-1">
+             بناءً على المعاملات السابقة
+          </div>
+        </div>
+
+        {/* Daily In */}
+        <div className="bg-white p-6 rounded-[32px] border border-emerald-100 shadow-sm bg-emerald-50/20">
+          <p className="text-emerald-600 font-bold text-xs mb-1">إجمالي الداخل اليوم</p>
+          <h3 className="text-2xl font-black text-emerald-700">
+            +{dailyIncome.toLocaleString()} <span className="text-sm font-normal opacity-50">{storeSettings.currency}</span>
+          </h3>
+          <div className="mt-2 text-[10px] text-emerald-500 font-bold flex items-center gap-1">
+             مبيعات وتحصيل مديونيات
+          </div>
+        </div>
+
+        {/* Daily Out */}
+        <div className="bg-white p-6 rounded-[32px] border border-red-100 shadow-sm bg-red-50/20">
+          <p className="text-red-600 font-bold text-xs mb-1">إجمالي الخارج اليوم</p>
+          <h3 className="text-2xl font-black text-red-700">
+            -{ (dailyExpensesTotal + dailyPurchasesTotal + dailyReturnsValue).toLocaleString() } <span className="text-sm font-normal opacity-50">{storeSettings.currency}</span>
+          </h3>
+          <div className="mt-2 text-[10px] text-red-500 font-bold flex items-center gap-1">
+             مصاريف، مشتريات، ومرتجعات
+          </div>
+        </div>
+
+        {/* Closing Balance */}
+        <div className="bg-slate-900 p-6 rounded-[32px] shadow-xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full -mr-12 -mt-12 blur-2xl" />
+          <p className="text-slate-400 font-bold text-xs mb-1 relative z-10">رصيد الإغلاق (الحالي)</p>
+          <h3 className="text-2xl font-black text-white relative z-10">
+            {closingBalance.toLocaleString()} <span className="text-sm font-normal text-slate-500">{storeSettings.currency}</span>
+          </h3>
+          <div className="mt-2 text-[10px] text-indigo-400 font-bold flex items-center gap-1 relative z-10">
+            <TrendingUp size={12} /> رصيد الخزينة النهائي
+          </div>
+        </div>
+      </div>
+
+      {/* Payment Methods Breakdown */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        {[
+          { id: 'cash', label: 'كاش', icon: <Landmark size={18} />, color: 'emerald', value: methodsBreakdown.cash },
+          { id: 'visa', label: 'فيزا', icon: <CreditCard size={18} />, color: 'blue', value: methodsBreakdown.visa },
+          { id: 'wallet', label: 'محفظة', icon: <Smartphone size={18} />, color: 'purple', value: methodsBreakdown.wallet },
+          { id: 'instapay', label: 'انستاباي', icon: <Zap size={18} />, color: 'amber', value: methodsBreakdown.instapay },
+        ].map(m => (
+          <div key={m.id} className="bg-white p-4 rounded-2xl border border-slate-100 flex items-center gap-4">
+            <div className={`w-10 h-10 rounded-xl bg-${m.color}-50 text-${m.color}-600 flex items-center justify-center`}>
+              {m.icon}
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-slate-400">{m.label}</p>
+              <p className="text-sm font-black text-slate-700">{m.value.toLocaleString()}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Daily Transactions Table */}
+      <div className="bg-white rounded-[32px] shadow-sm border border-slate-100 overflow-hidden mb-8">
+        <div className="p-6 border-b border-slate-50 flex items-center justify-between">
+          <h3 className="font-black text-slate-800 flex items-center gap-2">
+            <ArrowRightLeft size={20} className="text-indigo-600" />
+            سجل معاملات اليوم
+          </h3>
+          <span className="text-xs font-bold bg-slate-100 text-slate-500 px-3 py-1 rounded-full">
+            {allDailyTransactions.length} عملية
+          </span>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-right">
             <thead>
               <tr className="bg-slate-50/50 text-slate-400 text-[10px] font-black uppercase tracking-widest border-b border-slate-100">
-                <th className="p-6">البند / الفئة</th>
+                <th className="p-6">الوقت</th>
+                <th className="p-6">النوع</th>
+                <th className="p-6">التفاصيل</th>
+                <th className="p-6">طريقة الدفع</th>
                 <th className="p-6">المبلغ</th>
-                <th className="p-6 text-center">ملاحظات إضافية</th>
-                <th className="p-6 text-center">التاريخ</th>
-                <th className="p-6 text-left">الإجراءات</th>
+                <th className="p-6 text-left">إجراءات</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {filteredExpenses.length === 0 ? (
+              {allDailyTransactions.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="p-20 text-center">
+                  <td colSpan={6} className="p-20 text-center">
                     <div className="flex flex-col items-center opacity-20">
-                      <FileText size={64} />
-                      <p className="text-xl font-bold mt-4">لا توجد عمليات مسجلة</p>
+                      <Search size={64} />
+                      <p className="text-xl font-bold mt-4">لا توجد معاملات في هذا اليوم</p>
                     </div>
                   </td>
                 </tr>
               ) : (
-                filteredExpenses.map((expense) => (
-                  <tr key={expense.id} className="hover:bg-slate-50/50 transition-colors group">
+                allDailyTransactions.map((t) => (
+                  <tr key={t.id} className="hover:bg-slate-50/50 transition-colors group">
+                    <td className="p-6 text-slate-400 text-xs font-bold">{t.time}</td>
                     <td className="p-6">
-                      <span className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-50 text-indigo-700 rounded-lg font-bold text-xs border border-indigo-100">
-                        {expense.category}
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-bold text-[10px] ${
+                        t.isOut ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                      }`}>
+                        {t.isOut ? <ArrowDown size={10} /> : <ArrowUp size={10} />}
+                        {t.type}
                       </span>
                     </td>
-                    <td className="p-6 font-black text-red-600 text-lg">
-                      {expense.amount.toLocaleString()} <span className="text-xs font-normal text-slate-400">{storeSettings.currency}</span>
+                    <td className="p-6 font-medium text-slate-600 text-sm">{t.note}</td>
+                    <td className="p-6">
+                      <span className="text-xs font-black text-slate-400 flex items-center gap-1">
+                        {t.method === 'cash' && '💵 كاش'}
+                        {t.method === 'visa' && '💳 فيزا'}
+                        {t.method === 'wallet' && '📱 محفظة'}
+                        {t.method === 'instapay' && '⚡ انستا'}
+                      </span>
                     </td>
-                    <td className="p-6 text-slate-500 font-medium text-center">
-                      {expense.note || '—'}
-                    </td>
-                    <td className="p-6 text-slate-400 text-sm font-bold text-center">
-                      {new Date(expense.date).toLocaleDateString('ar-SA')}
+                    <td className={`p-6 font-black text-lg ${t.isOut ? 'text-red-600' : 'text-emerald-600'}`}>
+                      {t.isOut ? '-' : '+'}{t.amount.toLocaleString()}
                     </td>
                     <td className="p-6 text-left">
-                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button 
-                          onClick={() => handleOpenModal(expense)}
-                          className="p-2.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
-                        >
-                          <Edit3 size={18} />
-                        </button>
-                        <button 
-                          onClick={() => deleteExpense(expense.id)}
-                          className="p-2.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
+                       {t.original && (
+                         <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => handleOpenModal(t.original)} className="p-2 text-slate-400 hover:text-indigo-600 transition"><Edit3 size={16} /></button>
+                            <button onClick={() => deleteExpense(t.id)} className="p-2 text-slate-400 hover:text-red-500 transition"><Trash2 size={16} /></button>
+                         </div>
+                       )}
                     </td>
                   </tr>
                 ))
@@ -324,36 +400,50 @@ export default function Finance() {
           <div className="bg-white rounded-[40px] shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
             <div 
               className="p-8 text-white flex justify-between items-center"
-              style={{ backgroundColor: storeSettings.themeColor }}
+              style={{ backgroundColor: tc }}
             >
               <div>
-                <h2 className="text-2xl font-black">{editingExpense ? 'تعديل العملية' : 'إضافة عملية جديدة'}</h2>
-                <p className="text-white/70 text-sm mt-1">سجل تفاصيل المصاريف أو التكاليف</p>
+                <h2 className="text-2xl font-black">{editingExpense ? 'تعديل المصروف' : 'إضافة مصروف جديد'}</h2>
+                <p className="text-white/70 text-sm mt-1">سجل تفاصيل المصاريف التشغيلية</p>
               </div>
               <button onClick={() => setShowModal(false)} className="bg-white/10 p-2 rounded-full hover:bg-white/20 transition text-white">
                 <X size={24} />
               </button>
             </div>
             <div className="p-8 space-y-6">
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">الفئة / البند</label>
-                <select 
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 focus:ring-2 focus:ring-indigo-500/20 outline-none font-bold"
-                  value={formData.category}
-                  onChange={e => setFormData({...formData, category: e.target.value})}
-                >
-                  <option value="عام">عام</option>
-                  <option value="إيجار">إيجار</option>
-                  <option value="كهرباء/مياه">كهرباء / مياه</option>
-                  <option value="رواتب">رواتب موظفين</option>
-                  <option value="نقل/توصيل">نقل / توصيل</option>
-                  <option value="صيانة">صيانة</option>
-                  <option value="مشتريات للمحل">مشتريات للمحل</option>
-                  <option value="إهلاك">إهلاك</option>
-                </select>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">الفئة</label>
+                  <select 
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 focus:ring-2 focus:ring-indigo-500/20 outline-none font-bold"
+                    value={formData.category}
+                    onChange={e => setFormData({...formData, category: e.target.value})}
+                  >
+                    <option value="عام">عام</option>
+                    <option value="إيجار">إيجار</option>
+                    <option value="كهرباء/مياه">كهرباء / مياه</option>
+                    <option value="رواتب">رواتب</option>
+                    <option value="نقل/توصيل">نقل / توصيل</option>
+                    <option value="صيانة">صيانة</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">طريقة الدفع</label>
+                  <select 
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 focus:ring-2 focus:ring-indigo-500/20 outline-none font-bold text-indigo-600"
+                    value={formData.payment_method}
+                    onChange={e => setFormData({...formData, payment_method: e.target.value as any})}
+                  >
+                    <option value="cash">💵 كاش</option>
+                    <option value="visa">💳 فيزا</option>
+                    <option value="wallet">📱 محفظة</option>
+                    <option value="instapay">⚡ انستاباي</option>
+                  </select>
+                </div>
               </div>
+              
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">المبلغ</label>
+                <label className="block text-sm font-bold text-slate-700 mb-2">المبلغ</label>
                 <div className="relative">
                   <input 
                     type="number" 
@@ -366,17 +456,17 @@ export default function Finance() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">ملاحظات</label>
+                <label className="block text-sm font-bold text-slate-700 mb-2">ملاحظات</label>
                 <textarea 
                   placeholder="اكتب ملاحظاتك هنا..."
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 h-32 focus:ring-2 focus:ring-indigo-500/20 outline-none font-medium resize-none"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 h-24 focus:ring-2 focus:ring-indigo-500/20 outline-none font-medium resize-none"
                   value={formData.note}
                   onChange={e => setFormData({...formData, note: e.target.value})}
                 />
               </div>
               <button 
                 onClick={handleSubmit}
-                style={{ backgroundColor: storeSettings.themeColor }}
+                style={{ backgroundColor: tc }}
                 className="w-full text-white py-5 rounded-2xl font-black text-lg shadow-xl hover:opacity-90 transition-all flex items-center justify-center gap-3"
               >
                 {editingExpense ? 'حفظ التعديلات' : 'إضافة العملية'}

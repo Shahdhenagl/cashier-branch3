@@ -45,12 +45,12 @@ export interface PurchaseItem {
   purchase_price: number;
 }
 
-export interface PurchaseInvoice {
   id: string;
   invoice_number: string;
   supplier_id: string;
   total: number;
   paid_amount: number;
+  payment_method: 'cash' | 'visa' | 'wallet' | 'instapay';
   created_at: string;
   items?: PurchaseItem[];
 }
@@ -62,14 +62,15 @@ export interface Order {
   paid_amount: number;
   type: 'sale' | 'payment';
   date: string;
+  payment_method: 'cash' | 'visa' | 'wallet' | 'instapay';
   customer?: Customer;
 }
 
-export interface Expense {
   id: string;
   category: string;
   amount: number;
   note: string;
+  payment_method: 'cash' | 'visa' | 'wallet' | 'instapay';
   date: string;
 }
 
@@ -80,9 +81,9 @@ export interface StoreSettings {
   taxRate: number;
   themeColor: string;
   address: string;
-  phone: string;
   phone2: string;
   whatsappCountryCode: string;
+  initial_balance: number;
 }
 
 // ─── Store Interface ──────────────────────────────────────────
@@ -112,7 +113,7 @@ interface CashierStore {
   clearCart: () => void;
 
   // Operations
-  checkout: (total: number, customerDetails?: { name: string; phone: string }, paidAmount?: number, type?: 'sale' | 'payment') => Promise<string>;
+  checkout: (total: number, customerDetails?: { name: string; phone: string }, paidAmount?: number, type?: 'sale' | 'payment', paymentMethod?: string) => Promise<string>;
   processReturn: (orderId: string, productId: string, returnQty: number) => Promise<boolean>;
 
   // Admin
@@ -155,6 +156,7 @@ function mapSettings(row: Record<string, unknown>): StoreSettings {
     phone: (row.phone as string) ?? '',
     phone2: (row.phone2 as string) ?? '',
     whatsappCountryCode: (row.whatsapp_country_code as string) ?? '2',
+    initial_balance: (row.initial_balance as number) ?? 0,
   };
 }
 
@@ -170,6 +172,7 @@ export const useStore = create<CashierStore>((set, get) => ({
     phone: '',
     phone2: '',
     whatsappCountryCode: '2',
+    initial_balance: 0,
   },
   products: [],
   categories: [],
@@ -249,6 +252,7 @@ export const useStore = create<CashierStore>((set, get) => ({
           total: o.total as number,
           paid_amount: (o.paid_amount as number) ?? (o.total as number),
           type: (o.type as string) as 'sale' | 'payment' ?? 'sale',
+          payment_method: (o.payment_method as any) ?? 'cash',
           date: o.created_at as string,
           items,
           customer: custRow
@@ -284,6 +288,7 @@ export const useStore = create<CashierStore>((set, get) => ({
               category: e.category,
               amount: e.amount,
               note: e.note,
+              payment_method: e.payment_method ?? 'cash',
               date: e.created_at
             }))
           });
@@ -354,7 +359,7 @@ export const useStore = create<CashierStore>((set, get) => ({
   clearCart: () => set({ cart: [] }),
 
   // ── Checkout ───────────────────────────────────────────────
-  checkout: async (total, customerDetails, paidAmount = total, type = 'sale') => {
+  checkout: async (total, customerDetails, paidAmount = total, type = 'sale', paymentMethod = 'cash') => {
     const state = get();
     if (state.cart.length === 0 && type !== 'payment') return state.activeInvoiceId;
 
@@ -395,7 +400,8 @@ export const useStore = create<CashierStore>((set, get) => ({
       total, 
       paid_amount: savedPaidAmount,
       type,
-      customer_id: customerId 
+      customer_id: customerId,
+      payment_method: paymentMethod
     });
 
     if (orderError) {
@@ -437,6 +443,7 @@ export const useStore = create<CashierStore>((set, get) => ({
       total,
       paid_amount: savedPaidAmount,
       type,
+      payment_method: paymentMethod as any,
       date: new Date().toISOString(),
       customer: finalCustomer,
     };
@@ -555,6 +562,7 @@ export const useStore = create<CashierStore>((set, get) => ({
         total: o.total as number,
         paid_amount: (o.paid_amount as number) ?? (o.total as number),
         type: (o.type as string) as 'sale' | 'payment' ?? 'sale',
+        payment_method: (o.payment_method as any) ?? 'cash',
         date: o.created_at as string,
         items,
         customer: custRow
@@ -577,6 +585,7 @@ export const useStore = create<CashierStore>((set, get) => ({
     if (newSettings.phone !== undefined) mapped.phone = newSettings.phone;
     if (newSettings.phone2 !== undefined) mapped.phone2 = newSettings.phone2;
     if (newSettings.whatsappCountryCode !== undefined) mapped.whatsapp_country_code = newSettings.whatsappCountryCode;
+    if (newSettings.initial_balance !== undefined) mapped.initial_balance = newSettings.initial_balance;
 
     const { data: existing } = await supabase.from('store_settings').select('id').limit(1).maybeSingle();
     
@@ -610,7 +619,8 @@ export const useStore = create<CashierStore>((set, get) => ({
     const { data, error } = await supabase.from('expenses').insert({
       category: expense.category,
       amount: expense.amount,
-      note: expense.note
+      note: expense.note,
+      payment_method: expense.payment_method
     }).select().single();
     
     if (error) {
@@ -624,6 +634,7 @@ export const useStore = create<CashierStore>((set, get) => ({
         category: (data as any).category,
         amount: (data as any).amount,
         note: (data as any).note,
+        payment_method: (data as any).payment_method,
         date: (data as any).created_at
       };
       set((state) => ({ expenses: [newExp, ...state.expenses] }));
@@ -634,7 +645,8 @@ export const useStore = create<CashierStore>((set, get) => ({
     const { data, error } = await supabase.from('expenses').update({
       category: expense.category,
       amount: expense.amount,
-      note: expense.note
+      note: expense.note,
+      payment_method: expense.payment_method
     }).eq('id', id).select().single();
 
     if (error) {
@@ -707,7 +719,8 @@ export const useStore = create<CashierStore>((set, get) => ({
         invoice_number: invoice.invoice_number,
         supplier_id: invoice.supplier_id,
         total: invoice.total,
-        paid_amount: invoice.paid_amount
+        paid_amount: invoice.paid_amount,
+        payment_method: invoice.payment_method
       })
       .select()
       .single();

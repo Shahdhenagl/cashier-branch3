@@ -170,6 +170,21 @@ export default function Settings() {
           </div>
 
           <div className="col-span-2 md:col-span-1">
+            <label className="block text-sm font-bold text-slate-700 mb-2">رصيد الخزينة الابتدائي (رصيد البداية)</label>
+            <div className="flex items-center gap-2">
+              <input 
+                type="number" 
+                value={formData.initial_balance}
+                onChange={(e) => setFormData({...formData, initial_balance: parseFloat(e.target.value) || 0})}
+                className="w-full bg-slate-50 border border-slate-200 py-3 px-4 rounded-xl focus:ring-2 focus:outline-none transition font-bold text-emerald-600"
+                style={{ '--tw-ring-color': formData.themeColor + '40' } as any}
+                placeholder="0.00"
+              />
+            </div>
+            <p className="text-[11px] text-slate-400 mt-1">يُستخدم كحجر أساس لحسابات الخزينة والميزانية اليومية.</p>
+          </div>
+
+          <div className="col-span-2 md:col-span-1">
             <label className="block text-sm font-bold text-slate-700 mb-2">لون هوية النظام الأولي</label>
             <div className="flex items-center gap-4 bg-slate-50 border border-slate-200 py-2 px-4 rounded-xl transition">
               <input 
@@ -180,7 +195,6 @@ export default function Settings() {
               />
               <span className="text-slate-500 text-sm font-mono" dir="ltr">{formData.themeColor || '#4f46e5'}</span>
             </div>
-            <p className="text-xs text-slate-400 mt-2">قم بالضغط على المربع لاختيار لون يتناسب مع شعارك الخاص وسيتم تغيير لون النظام بالكامل!</p>
           </div>
         </div>
 

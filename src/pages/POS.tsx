@@ -222,7 +222,7 @@ export default function POS() {
       return;
     }
 
-    const invoiceId = await checkout(currentTotal, { name: currentCustomerName, phone: currentCustomerPhone }, finalPaidAmount, 'sale');
+    const invoiceId = await checkout(currentTotal, { name: currentCustomerName, phone: currentCustomerPhone }, finalPaidAmount, 'sale', method);
     
     const details: any = {
       cart: currentCart,
