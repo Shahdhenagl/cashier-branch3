@@ -1,13 +1,11 @@
 import { useState, useMemo } from 'react';
 import { useStore, type Expense } from '../../store/useStore';
 import { 
-  Wallet, Plus, Trash2, Search, FileText, ArrowUp, ArrowDown, 
+  Wallet, Plus, Trash2, Search, ArrowUp, ArrowDown, 
   Calendar, Edit3, X, Download, TrendingUp, CreditCard, Smartphone, Zap, 
   ArrowRightLeft, Landmark
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 
 export default function Finance() {
   const { 

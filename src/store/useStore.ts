@@ -83,6 +83,7 @@ export interface StoreSettings {
   taxRate: number;
   themeColor: string;
   address: string;
+  phone: string;
   phone2: string;
   whatsappCountryCode: string;
   initial_balance: number;
