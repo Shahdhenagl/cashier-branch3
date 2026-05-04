@@ -25,6 +25,9 @@ export default function POS() {
   const [lastCustomerInfo, setLastCustomerInfo] = useState<any>(null);
   const [lastOrderDetails, setLastOrderDetails] = useState<any>(null);
   const [showCustomerSuggestions, setShowCustomerSuggestions] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [pendingShouldPrint, setPendingShouldPrint] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'visa' | 'wallet' | 'instapay'>('cash');
 
   useEffect(() => {
     if (isDarkMode) {
@@ -126,6 +129,7 @@ export default function POS() {
   .payment-status{margin-top:15px;padding:10px;border-radius:8px;text-align:center;font-weight:bold;font-size:14px;}
   .status-paid{background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;}
   .status-debt{background:#fef2f2;color:#dc2626;border:1px solid #fecaca;}
+  .payment-method-badge{margin-top:10px;padding:8px 14px;border-radius:8px;display:inline-flex;align-items:center;gap:8px;font-weight:900;font-size:14px;background:#f0f4ff;color:#4f46e5;border:1px solid #c7d2fe;}
   
   .footer{text-align:center;margin-top:30px;padding-top:15px;border-top:1px dashed #cbd5e1;font-size:12px;color:#94a3b8;font-weight:bold;}
   
@@ -179,6 +183,9 @@ export default function POS() {
     ` : `
       <div class="payment-status status-paid">✓ تم سداد الفاتورة بالكامل</div>
     `}
+    <div class="payment-method-badge">
+      ${{ cash: '💵 كاش', visa: '💳 فيزا / بطاقة', wallet: '📱 محفظة إلكترونية', instapay: '⚡ انستاباي' }[orderDetails.paymentMethod] || '💵 كاش'}
+    </div>
   </div>
 
   <div class="footer">شكراً لثقتكم بنا - ${currentSettings.name} ترحب بكم دائماً</div>
@@ -193,7 +200,14 @@ export default function POS() {
     }
   };
 
-  const doCheckout = async (shouldPrint: boolean) => {
+  // Opens payment method modal before checkout
+  const handleCheckoutClick = (shouldPrint: boolean) => {
+    if (cart.length === 0) return;
+    setPendingShouldPrint(shouldPrint);
+    setShowPaymentModal(true);
+  };
+
+  const doCheckout = async (shouldPrint: boolean, method: typeof paymentMethod) => {
     const currentCart = [...cart];
     const currentSubtotal = subtotal;
     const currentTax = tax;
@@ -210,7 +224,7 @@ export default function POS() {
 
     const invoiceId = await checkout(currentTotal, { name: currentCustomerName, phone: currentCustomerPhone }, finalPaidAmount, 'sale');
     
-    const details = {
+    const details: any = {
       cart: currentCart,
       subtotal: currentSubtotal,
       tax: currentTax,
@@ -218,11 +232,9 @@ export default function POS() {
       paidAmount: finalPaidAmount,
       customerName: currentCustomerName,
       customerPhone: currentCustomerPhone,
-      customerId: invoiceId // In the store checkout, it returns invoiceId, but we need the customer ID if possible. 
-      // Actually, checkout returns invoiceId. Let's find the customer in store.
+      paymentMethod: method,
     };
     
-    // Better: find customer after checkout or just pass details.
     const actualCustomer = useStore.getState().customers.find(c => c.phone === currentCustomerPhone);
     details.customerId = actualCustomer?.id || '';
 
@@ -238,6 +250,7 @@ export default function POS() {
     setCustomerName('');
     setCustomerPhone('');
     setPaidAmountStr('');
+    setPaymentMethod('cash');
     setCustomerDebt(0);
     setShowCustomerSuggestions(false);
   };
@@ -306,6 +319,59 @@ export default function POS() {
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-slate-900 transition-colors duration-300 overflow-hidden font-sans text-gray-900 dark:text-gray-100">
       
+      {/* PAYMENT METHOD MODAL */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 z-[150] bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-[32px] shadow-2xl w-full max-w-sm overflow-hidden border border-gray-200 dark:border-slate-700">
+            <div className="p-6 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between">
+              <h3 className="text-xl font-black text-gray-900 dark:text-white">اختر طريقة الدفع</h3>
+              <button onClick={() => setShowPaymentModal(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition">
+                <X size={20} className="text-gray-500" />
+              </button>
+            </div>
+            <div className="p-5 grid grid-cols-2 gap-3">
+              {([
+                { id: 'cash',     label: 'كاش',                icon: '💵', color: 'emerald' },
+                { id: 'visa',     label: 'فيزا / بطاقة',       icon: '💳', color: 'blue' },
+                { id: 'wallet',   label: 'محفظة إلكترونية',    icon: '📱', color: 'purple' },
+                { id: 'instapay', label: 'انستاباي',            icon: '⚡', color: 'amber' },
+              ] as const).map(m => (
+                <button
+                  key={m.id}
+                  onClick={() => setPaymentMethod(m.id)}
+                  className={`flex flex-col items-center justify-center gap-2 p-5 rounded-2xl border-2 font-bold transition-all ${
+                    paymentMethod === m.id
+                      ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 scale-105 shadow-lg'
+                      : 'border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-600 dark:text-gray-300 hover:border-indigo-300 hover:bg-indigo-50/50'
+                  }`}
+                >
+                  <span className="text-3xl">{m.icon}</span>
+                  <span className="text-sm text-center leading-tight">{m.label}</span>
+                  {paymentMethod === m.id && <span className="text-xs font-black text-indigo-500">✓ محدد</span>}
+                </button>
+              ))}
+            </div>
+            <div className="p-5 pt-2 flex gap-3">
+              <button
+                onClick={() => setShowPaymentModal(false)}
+                className="flex-1 border-2 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-gray-400 py-3.5 rounded-2xl font-bold hover:bg-gray-50 dark:hover:bg-slate-700 transition"
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={() => {
+                  setShowPaymentModal(false);
+                  doCheckout(pendingShouldPrint, paymentMethod);
+                }}
+                className="flex-2 flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white py-3.5 rounded-2xl font-black transition shadow-lg flex items-center justify-center gap-2"
+              >
+                <Banknote size={20} /> تأكيد الدفع
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* SUCCESS MODAL */}
       {showSuccessModal && (
         <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
@@ -761,7 +827,7 @@ export default function POS() {
           <div className="flex flex-col gap-3">
             <div className="flex gap-2">
               <button
-                onClick={() => doCheckout(false)}
+                onClick={() => handleCheckoutClick(false)}
                 disabled={cart.length === 0}
                 style={cart.length > 0 ? { background: storeSettings.themeColor } : {}}
                 className="flex-1 disabled:bg-gray-300 dark:disabled:bg-slate-700 disabled:text-gray-500 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg disabled:shadow-none text-base"
@@ -770,7 +836,7 @@ export default function POS() {
                 تحصيل ودفع
               </button>
               <button
-                onClick={() => doCheckout(true)}
+                onClick={() => handleCheckoutClick(true)}
                 disabled={cart.length === 0}
                 className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 disabled:from-gray-300 disabled:to-gray-400 dark:disabled:from-slate-700 dark:disabled:to-slate-700 disabled:text-gray-500 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-500/20 disabled:shadow-none text-base border border-transparent"
               >
