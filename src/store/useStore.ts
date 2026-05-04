@@ -45,6 +45,7 @@ export interface PurchaseItem {
   purchase_price: number;
 }
 
+export interface PurchaseInvoice {
   id: string;
   invoice_number: string;
   supplier_id: string;
@@ -66,6 +67,7 @@ export interface Order {
   customer?: Customer;
 }
 
+export interface Expense {
   id: string;
   category: string;
   amount: number;
