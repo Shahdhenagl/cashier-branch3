@@ -11,6 +11,7 @@ export default function POS() {
   const [searchQuery, setSearchQuery] = useState('');
   
   // Customer details for checkout
+  const [customerId, setCustomerId] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [paidAmountStr, setPaidAmountStr] = useState('');
@@ -80,10 +81,10 @@ export default function POS() {
       </tr>`
     ).join('');
 
-    const customerBlock = (orderDetails.customerName || orderDetails.customerPhone)
+    const customerBlock = (orderDetails.customerName || orderDetails.customerPhone || orderDetails.customId)
       ? `<div class="customer-info-grid">
           <div class="info-item"><strong>اسم العميل:</strong> <span>${orderDetails.customerName || '—'}</span></div>
-          <div class="info-item"><strong>رقم العميل (ID):</strong> <span dir="ltr">${orderDetails.customerId?.substring(0, 8) || '—'}</span></div>
+          <div class="info-item"><strong>رقم الكارت (ID):</strong> <span dir="ltr">${orderDetails.customId || orderDetails.customerId?.substring(0, 8) || '—'}</span></div>
           <div class="info-item"><strong>رقم الهاتف:</strong> <span dir="ltr">${orderDetails.customerPhone || '—'}</span></div>
           <div class="info-item"><strong>رقم الفاتورة:</strong> <span>#${invId}</span></div>
           <div class="info-item"><strong>التاريخ:</strong> <span>${printDate}</span></div>
@@ -217,6 +218,7 @@ export default function POS() {
     const currentTotal = total;
     const currentCustomerName = customerName;
     const currentCustomerPhone = customerPhone;
+    const currentCustomId = customerId;
 
     const finalPaidAmount = paidAmountStr === '' ? currentTotal : parseFloat(paidAmountStr) || 0;
 
@@ -225,7 +227,7 @@ export default function POS() {
       return;
     }
 
-    const invoiceId = await checkout(currentTotal, { name: currentCustomerName, phone: currentCustomerPhone }, finalPaidAmount, 'sale', method);
+    const invoiceId = await checkout(currentTotal, { name: currentCustomerName, phone: currentCustomerPhone, custom_id: currentCustomId }, finalPaidAmount, 'sale', method);
     
     const details: any = {
       cart: currentCart,
@@ -236,11 +238,13 @@ export default function POS() {
       paidAmount: finalPaidAmount,
       customerName: currentCustomerName,
       customerPhone: currentCustomerPhone,
+      customId: currentCustomId,
       paymentMethod: method,
     };
     
-    const actualCustomer = useStore.getState().customers.find(c => c.phone === currentCustomerPhone);
+    const actualCustomer = useStore.getState().customers.find(c => (currentCustomerPhone && c.phone === currentCustomerPhone) || (currentCustomId && c.custom_id === currentCustomId));
     details.customerId = actualCustomer?.id || '';
+    details.customId = actualCustomer?.custom_id || currentCustomId;
 
     setLastInvoiceId(invoiceId);
     setLastCustomerInfo({ name: currentCustomerName, phone: currentCustomerPhone });
@@ -253,6 +257,7 @@ export default function POS() {
 
     setCustomerName('');
     setCustomerPhone('');
+    setCustomerId('');
     setPaidAmountStr('');
     setDiscountStr('');
     setPaymentMethod('cash');
@@ -264,7 +269,7 @@ export default function POS() {
     ? customers.filter(c => {
         const normalizedName = normalizeArabic(c.name);
         const normalizedQuery = normalizeArabic(customerName);
-        const customerIdShort = c.id.substring(0, 8).toLowerCase();
+        const customerIdShort = (c.custom_id || c.id.substring(0, 8)).toLowerCase();
         return (
           normalizedName.includes(normalizedQuery) || 
           c.phone.includes(customerName) ||
@@ -278,6 +283,7 @@ export default function POS() {
   const handleSelectCustomer = (customer: any) => {
     setCustomerName(customer.name);
     setCustomerPhone(customer.phone);
+    setCustomerId(customer.custom_id || '');
     setShowCustomerSuggestions(false);
   };
 
@@ -298,30 +304,40 @@ export default function POS() {
 
   // Sync customer info and debt calculation
   useEffect(() => {
-    if (!customerPhone) {
+    if (!customerPhone && !customerId) {
       setCustomerDebt(0);
       return;
     }
-    const existingCust = customers.find(c => c.phone === customerPhone);
+    const existingCust = customers.find(c => 
+      (customerPhone && c.phone === customerPhone) || 
+      (customerId && c.custom_id === customerId)
+    );
+
     if (existingCust) {
       setCustomerName(existingCust.name);
+      if (customerPhone !== existingCust.phone) setCustomerPhone(existingCust.phone);
+      if (customerId !== existingCust.custom_id) setCustomerId(existingCust.custom_id || '');
+      
       const cOrders = orders.filter(o => o.customer?.id === existingCust.id);
       const cDebt = cOrders.reduce((sum, o) => {
         const returnedValue = o.items.reduce((rSum, item) => rSum + (item.returned_quantity * item.sale_price), 0);
-        // Debt = (Original Total - Returns) - Paid Amount
         return sum + ((o.total - returnedValue) - o.paid_amount);
       }, 0);
       setCustomerDebt(cDebt > 0 ? cDebt : 0);
     } else {
       setCustomerDebt(0);
     }
-  }, [customerPhone, orders, customers]);
+  }, [customerPhone, customerId, orders, customers]);
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setCustomerPhone(e.target.value);
   };
 
-  const activeCustomer = customers.find(c => c.phone === customerPhone);
+  const handleIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCustomerId(e.target.value);
+  };
+
+  const activeCustomer = customers.find(c => (customerPhone && c.phone === customerPhone) || (customerId && c.custom_id === customerId));
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-slate-900 transition-colors duration-300 overflow-hidden font-sans text-gray-900 dark:text-gray-100">
@@ -690,24 +706,28 @@ export default function POS() {
               </div>
             </div>
           </div>
-          <div className="relative flex gap-2 text-sm">
-            {activeCustomer && (
-              <div className="bg-white dark:bg-slate-800 border-2 border-indigo-500 text-indigo-600 dark:text-indigo-400 px-3 py-1.5 rounded-xl font-mono font-black flex flex-col items-center justify-center shadow-sm shrink-0">
-                <span className="text-[8px] uppercase opacity-70 mb-0.5">ID العميل</span>
-                <span className="text-sm tracking-tighter">{activeCustomer.id.substring(0, 8)}</span>
-              </div>
-            )}
+          <div className="relative flex gap-2 text-sm h-12">
+            <div className="flex-1">
+              <input 
+                type="text" 
+                dir="ltr" 
+                value={customerId} 
+                onChange={handleIdChange} 
+                className="w-full bg-white/95 text-indigo-600 dark:text-indigo-400 placeholder-slate-400 border-2 border-indigo-200 dark:border-indigo-900/50 py-2.5 px-3 rounded-xl focus:ring-2 focus:ring-white focus:outline-none transition font-black shadow-inner text-sm h-full" 
+                placeholder="رقم الكارت (ID)" 
+              />
+            </div>
             <div className="flex-1">
               <input 
                 type="text" 
                 dir="ltr" 
                 value={customerPhone} 
                 onChange={handlePhoneChange} 
-                className="w-full bg-white/95 text-slate-800 placeholder-slate-400 border-0 py-2.5 px-3 rounded-lg focus:ring-2 focus:ring-white focus:outline-none transition font-medium shadow-inner text-sm h-full" 
-                placeholder="رقم الموبايل (اختياري)" 
+                className="w-full bg-white/95 text-slate-800 placeholder-slate-400 border-0 py-2.5 px-3 rounded-xl focus:ring-2 focus:ring-white focus:outline-none transition font-medium shadow-inner text-sm h-full" 
+                placeholder="رقم الموبايل" 
               />
             </div>
-            <div className="flex-[1.5] relative">
+            <div className="flex-[1.2] relative">
               <input 
                 type="text" 
                 value={customerName} 
@@ -716,8 +736,8 @@ export default function POS() {
                   setShowCustomerSuggestions(true);
                 }} 
                 onFocus={() => setShowCustomerSuggestions(true)}
-                className="w-full bg-white/95 text-slate-800 placeholder-slate-400 border-0 py-2.5 px-3 rounded-lg focus:ring-2 focus:ring-white focus:outline-none transition font-medium shadow-inner text-sm h-full" 
-                placeholder={`اسم العميل (${customers.length})...`} 
+                className="w-full bg-white/95 text-slate-800 placeholder-slate-400 border-0 py-2.5 px-3 rounded-xl focus:ring-2 focus:ring-white focus:outline-none transition font-medium shadow-inner text-sm h-full" 
+                placeholder={`اسم العميل...`} 
               />
               
               {showCustomerSuggestions && filteredCustomers.length > 0 && (
@@ -734,8 +754,8 @@ export default function POS() {
                         <span className="text-[10px] text-slate-400 font-mono" dir="ltr">{c.phone}</span>
                       </div>
                       <div className="bg-indigo-600 dark:bg-indigo-500 px-3 py-2 rounded-xl border border-indigo-700 dark:border-indigo-400 text-center min-w-[90px] shadow-sm">
-                        <p className="text-[8px] font-bold text-white/70 uppercase mb-0.5">ID العميل</p>
-                        <p className="text-xs font-black text-white font-mono tracking-wider">{c.id.substring(0, 8)}</p>
+                        <p className="text-[8px] font-bold text-white/70 uppercase mb-0.5">رقم الكارت</p>
+                        <p className="text-xs font-black text-white font-mono tracking-wider">{c.custom_id || c.id.substring(0, 8)}</p>
                       </div>
                     </button>
                   ))}

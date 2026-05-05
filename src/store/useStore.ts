@@ -28,6 +28,7 @@ export interface Customer {
   name: string;
   phone: string;
   timestamp: string;
+  custom_id?: string;
 }
 
 export interface Supplier {
@@ -137,6 +138,9 @@ interface CashierStore {
   updateSupplier: (id: string, supplier: Partial<Supplier>) => Promise<void>;
   deleteSupplier: (id: string) => Promise<void>;
 
+  // Customers
+  updateCustomer: (id: string, customer: Partial<Customer>) => Promise<void>;
+
   // Purchases
   loadPurchaseInvoices: () => Promise<void>;
   addPurchaseInvoice: (invoice: Omit<PurchaseInvoice, 'id' | 'created_at' | 'items'>, items: PurchaseItem[]) => Promise<void>;
@@ -230,6 +234,7 @@ export const useStore = create<CashierStore>((set, get) => ({
         id: c.id as string,
         name: c.name as string,
         phone: c.phone as string,
+        custom_id: c.custom_id as string,
         timestamp: c.created_at as string,
       }));
 
@@ -377,16 +382,31 @@ export const useStore = create<CashierStore>((set, get) => ({
     let finalCustomer: Customer | undefined;
 
     // Upsert customer
-    if (customerDetails?.phone.trim()) {
-      const phone = customerDetails.phone.trim();
-      const existing = state.customers.find((c) => c.phone === phone);
+    if (customerDetails?.phone.trim() || customerDetails?.custom_id?.trim()) {
+      const phone = customerDetails.phone?.trim();
+      const custom_id = customerDetails.custom_id?.trim();
+      
+      const existing = state.customers.find((c) => 
+        (phone && c.phone === phone) || (custom_id && c.custom_id === custom_id)
+      );
+
       if (existing) {
         customerId = existing.id;
         finalCustomer = existing;
+        
+        // Update if needed (optional, maybe just name?)
+        if (customerDetails.name && existing.name !== customerDetails.name) {
+           await supabase.from('customers').update({ name: customerDetails.name }).eq('id', existing.id);
+           existing.name = customerDetails.name;
+        }
       } else {
         const { data: newCust } = await supabase
           .from('customers')
-          .insert({ name: customerDetails.name || 'بدون اسم', phone })
+          .insert({ 
+            name: customerDetails.name || 'بدون اسم', 
+            phone: phone || '', 
+            custom_id: custom_id 
+          })
           .select()
           .single();
         if (newCust) {
@@ -394,7 +414,8 @@ export const useStore = create<CashierStore>((set, get) => ({
           finalCustomer = {
             id: customerId,
             name: (newCust as Record<string, unknown>).name as string,
-            phone,
+            phone: (newCust as Record<string, unknown>).phone as string,
+            custom_id: (newCust as Record<string, unknown>).custom_id as string,
             timestamp: (newCust as Record<string, unknown>).created_at as string,
           };
         }

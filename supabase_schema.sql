@@ -49,6 +49,7 @@ create table if not exists products (
 -- جدول العملاء
 create table if not exists customers (
   id uuid default gen_random_uuid() primary key,
+  custom_id text unique,
   name text not null default 'بدون اسم',
   phone text unique not null,
   created_at timestamptz default now()

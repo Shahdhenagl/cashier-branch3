@@ -10,12 +10,15 @@ import html2canvas from 'html2canvas';
 export default function Customers() {
   const { customers, orders, storeSettings } = useStore();
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editForm, setEditForm] = useState({ name: '', phone: '', custom_id: '' });
+  const { updateCustomer } = useStore();
 
   const filteredCustomers = customers.filter(c => 
     normalizeArabic(c.name).includes(normalizeArabic(searchQuery)) || 
     c.phone.includes(searchQuery) ||
+    (c.custom_id || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
     c.id.substring(0, 8).toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -103,7 +106,20 @@ export default function Customers() {
   const handleOpenProfile = (customer: any) => {
     const metrics = getCustomerMetrics(customer.id);
     setSelectedCustomer({ ...customer, ...metrics });
+    setEditForm({ name: customer.name, phone: customer.phone, custom_id: customer.custom_id || '' });
+    setIsEditMode(false);
     setIsModalOpen(true);
+  };
+
+  const handleUpdateCustomer = async () => {
+    try {
+      await updateCustomer(selectedCustomer.id, editForm);
+      setSelectedCustomer({ ...selectedCustomer, ...editForm });
+      setIsEditMode(false);
+      alert("تم تحديث بيانات العميل بنجاح");
+    } catch (e: any) {
+      alert("خطأ في التحديث: " + e.message);
+    }
   };
 
   const handlePrintInvoice = (order: any) => {
@@ -156,7 +172,7 @@ export default function Customers() {
   </div>
   <div class="invoice-meta">
     <span>رقم: <strong>${order.id}</strong></span>
-    <span>ID العميل: <strong>${order.customer?.id.substring(0, 8) || '—'}</strong></span>
+    <span>ID العميل: <strong>${order.customer?.custom_id || order.customer?.id.substring(0, 8) || '—'}</strong></span>
     <span>${printDate}</span>
   </div>
   <table>
@@ -259,7 +275,7 @@ export default function Customers() {
                           </div>
                           <div className="flex flex-col">
                             <span className="font-black text-slate-800">{customer.name}</span>
-                            <span className="text-[10px] text-slate-400 font-mono">ID: {customer.id.substring(0, 8)}</span>
+                            <span className="text-[10px] text-indigo-600 font-black font-mono">ID: {customer.custom_id || customer.id.substring(0, 8)}</span>
                           </div>
                         </div>
                       </td>
@@ -323,17 +339,57 @@ export default function Customers() {
                   {selectedCustomer.name.charAt(0)}
                 </div>
                 <div>
-                  <h2 className="text-3xl font-black text-slate-800">{selectedCustomer.name}</h2>
-                  <div className="flex items-center gap-4 mt-2 text-slate-500 font-bold">
-                    <span className="flex items-center gap-1"><CreditCard size={14} /> {selectedCustomer.phone}</span>
-                    <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
-                    <span className="bg-slate-100 px-2 py-1 rounded-lg text-indigo-600 font-mono">ID: {selectedCustomer.id.substring(0, 8)}</span>
-                    <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
-                    <span>سجل منذ: {new Date(selectedCustomer.timestamp).toLocaleDateString('ar-SA')}</span>
-                  </div>
+                  {isEditMode ? (
+                    <div className="flex flex-col gap-2">
+                      <input 
+                        className="text-2xl font-black text-slate-800 border-b-2 border-indigo-500 focus:outline-none"
+                        value={editForm.name}
+                        onChange={e => setEditForm({ ...editForm, name: e.target.value })}
+                      />
+                      <div className="flex gap-4">
+                         <input 
+                          className="bg-slate-100 px-2 py-1 rounded-lg text-slate-600 font-bold focus:outline-none"
+                          value={editForm.phone}
+                          onChange={e => setEditForm({ ...editForm, phone: e.target.value })}
+                        />
+                        <input 
+                          placeholder="رقم الكارت ID"
+                          className="bg-indigo-50 px-2 py-1 rounded-lg text-indigo-600 font-mono font-black border border-indigo-200 focus:outline-none"
+                          value={editForm.custom_id}
+                          onChange={e => setEditForm({ ...editForm, custom_id: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <h2 className="text-3xl font-black text-slate-800">{selectedCustomer.name}</h2>
+                      <div className="flex items-center gap-4 mt-2 text-slate-500 font-bold">
+                        <span className="flex items-center gap-1"><CreditCard size={14} /> {selectedCustomer.phone}</span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
+                        <span className="bg-indigo-50 px-2 py-1 rounded-lg text-indigo-600 font-mono font-black border border-indigo-100">ID: {selectedCustomer.custom_id || selectedCustomer.id.substring(0, 8)}</span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
+                        <span>سجل منذ: {new Date(selectedCustomer.timestamp).toLocaleDateString('ar-SA')}</span>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
               <div className="flex gap-2">
+                {isEditMode ? (
+                   <button 
+                    onClick={handleUpdateCustomer}
+                    className="bg-emerald-600 text-white flex items-center gap-2 px-6 py-2.5 rounded-2xl font-bold hover:bg-emerald-700 transition shadow-lg"
+                  >
+                    حفظ التعديلات
+                  </button>
+                ) : (
+                  <button 
+                    onClick={() => setIsEditMode(true)}
+                    className="bg-slate-800 text-white flex items-center gap-2 px-6 py-2.5 rounded-2xl font-bold hover:bg-black transition shadow-lg"
+                  >
+                    تعديل البيانات
+                  </button>
+                )}
                 <button 
                   onClick={exportCustomerStatementPDF}
                   className="bg-indigo-600 text-white flex items-center gap-2 px-4 py-2.5 rounded-2xl font-bold hover:bg-indigo-700 transition shadow-lg shadow-indigo-100"
