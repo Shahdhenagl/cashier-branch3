@@ -10,6 +10,7 @@ import html2canvas from 'html2canvas';
 export default function Customers() {
   const { customers, orders, storeSettings } = useStore();
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editForm, setEditForm] = useState({ name: '', phone: '', custom_id: '' });

@@ -40,6 +40,7 @@ export default function Invoices() {
     const customerBlock = order.customer
       ? `<div class="customer-info-grid">
           <div class="info-item"><strong>اسم العميل:</strong> <span>${order.customer.name}</span></div>
+          <div class="info-item"><strong>رقم الكارت (ID):</strong> <span dir="ltr">${order.customer.custom_id || order.customer.id.substring(0, 8)}</span></div>
           <div class="info-item"><strong>رقم الهاتف:</strong> <span dir="ltr">${order.customer.phone}</span></div>
           <div class="info-item"><strong>رقم الفاتورة:</strong> <span>#${order.id}</span></div>
           <div class="info-item"><strong>التاريخ:</strong> <span>${printDate}</span></div>

@@ -118,7 +118,7 @@ interface CashierStore {
   clearCart: () => void;
 
   // Operations
-  checkout: (total: number, customerDetails?: { name: string; phone: string }, paidAmount?: number, type?: 'sale' | 'payment', paymentMethod?: string) => Promise<string>;
+  checkout: (total: number, customerDetails?: { name: string; phone: string; custom_id?: string }, paidAmount?: number, type?: 'sale' | 'payment', paymentMethod?: string) => Promise<string>;
   processReturn: (orderId: string, productId: string, returnQty: number) => Promise<boolean>;
 
   // Admin
@@ -373,7 +373,7 @@ export const useStore = create<CashierStore>((set, get) => ({
   clearCart: () => set({ cart: [] }),
 
   // ── Checkout ───────────────────────────────────────────────
-  checkout: async (total, customerDetails, paidAmount = total, type = 'sale', paymentMethod = 'cash') => {
+  checkout: async (total, customerDetails?: { name: string; phone: string; custom_id?: string }, paidAmount = total, type = 'sale', paymentMethod = 'cash') => {
     const state = get();
     if (state.cart.length === 0 && type !== 'payment') return state.activeInvoiceId;
 
@@ -845,5 +845,16 @@ export const useStore = create<CashierStore>((set, get) => ({
 
     // Refresh data
     await get().loadPurchaseInvoices();
+  },
+
+  updateCustomer: async (id, updated) => {
+    const { error } = await supabase.from('customers').update(updated).eq('id', id);
+    if (error) {
+      console.error("Update Customer Error:", error);
+      throw error;
+    }
+    set((state) => ({
+      customers: state.customers.map((c) => (c.id === id ? { ...c, ...updated } : c))
+    }));
   },
 }));

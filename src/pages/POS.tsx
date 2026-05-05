@@ -337,7 +337,6 @@ export default function POS() {
     setCustomerId(e.target.value);
   };
 
-  const activeCustomer = customers.find(c => (customerPhone && c.phone === customerPhone) || (customerId && c.custom_id === customerId));
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-slate-900 transition-colors duration-300 overflow-hidden font-sans text-gray-900 dark:text-gray-100">
