@@ -3,9 +3,11 @@ import { useStore, type Expense } from '../../store/useStore';
 import { 
   Wallet, Plus, Trash2, Search, ArrowUp, ArrowDown, 
   Calendar, Edit3, X, Download, TrendingUp, CreditCard, Smartphone, Zap, 
-  ArrowRightLeft, Landmark
+  ArrowRightLeft, Landmark, FileText
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 export default function Finance() {
   const { 
@@ -204,10 +206,38 @@ export default function Finance() {
     XLSX.writeFile(wb, `daily_report_${selectedDate}.xlsx`);
   };
 
+  const exportToPDF = async () => {
+    const element = document.getElementById('finance-report');
+    if (!element) return;
+    
+    // Hide buttons during capture
+    const buttons = element.querySelectorAll('.export-hide');
+    buttons.forEach((b: any) => b.style.display = 'none');
+    
+    try {
+      const canvas = await html2canvas(element, { 
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#f8fafc'
+      });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`daily_report_${selectedDate}.pdf`);
+    } catch (e) {
+      console.error("PDF Export Error:", e);
+    } finally {
+      buttons.forEach((b: any) => b.style.display = '');
+    }
+  };
+
   const tc = storeSettings.themeColor;
 
   return (
-    <div className="p-8 max-w-7xl mx-auto h-[calc(100vh-2rem)] overflow-y-auto" dir="rtl">
+    <div id="finance-report" className="p-8 max-w-7xl mx-auto h-[calc(100vh-2rem)] overflow-y-auto" dir="rtl">
       {/* Header & Date Picker */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 bg-white p-6 rounded-[32px] shadow-sm border border-slate-100">
         <div>
@@ -220,8 +250,8 @@ export default function Finance() {
           <p className="text-slate-500 mt-2 font-medium">مراقبة حركة الخزينة وتدفق الأموال</p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex items-center gap-3 bg-slate-50 px-4 py-2.5 rounded-2xl border border-slate-200 shadow-inner">
+        <div className="flex flex-wrap items-center gap-4 export-hide">
+          <div className="flex items-center gap-3 bg-white px-4 py-2.5 rounded-2xl border border-slate-200 shadow-inner">
             <Calendar size={20} className="text-indigo-600" />
             <input 
               type="date" 
@@ -238,6 +268,13 @@ export default function Finance() {
               title="تصدير Excel"
             >
               <Download size={22} />
+            </button>
+            <button 
+              onClick={exportToPDF}
+              className="p-3 bg-red-50 text-red-600 rounded-2xl hover:bg-red-100 transition shadow-sm border border-red-100"
+              title="تصدير PDF"
+            >
+              <FileText size={22} />
             </button>
             <button 
               onClick={() => handleOpenModal()}
