@@ -404,7 +404,7 @@ export const useStore = create<CashierStore>((set, get) => ({
           .from('customers')
           .insert({ 
             name: customerDetails.name || 'بدون اسم', 
-            phone: phone || '', 
+            phone: phone || null, 
             custom_id: custom_id 
           })
           .select()
