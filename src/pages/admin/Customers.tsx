@@ -375,18 +375,18 @@ export default function Customers() {
                   )}
                 </div>
               </div>
-              <div className="flex gap-3 items-center">
+              <div className="flex gap-2 items-center">
                 {isEditMode ? (
                   <>
                     <button 
                       onClick={() => setIsEditMode(false)}
-                      className="bg-slate-100 text-slate-600 px-6 py-2.5 rounded-2xl font-bold hover:bg-slate-200 transition"
+                      className="bg-slate-100 text-slate-600 px-4 py-2 rounded-xl font-bold hover:bg-slate-200 transition text-sm"
                     >
                       إلغاء
                     </button>
                     <button 
                       onClick={handleUpdateCustomer}
-                      className="bg-emerald-600 text-white flex items-center gap-2 px-6 py-2.5 rounded-2xl font-bold hover:bg-emerald-700 transition shadow-lg shadow-emerald-100"
+                      className="bg-emerald-600 text-white flex items-center gap-2 px-4 py-2 rounded-xl font-bold hover:bg-emerald-700 transition shadow-lg shadow-emerald-100 text-sm"
                     >
                       حفظ التعديلات
                     </button>
@@ -395,23 +395,23 @@ export default function Customers() {
                   <>
                     <button 
                       onClick={() => setIsEditMode(true)}
-                      className="bg-slate-800 text-white flex items-center gap-2 px-6 py-2.5 rounded-2xl font-bold hover:bg-black transition shadow-lg"
+                      className="bg-slate-800 text-white flex items-center gap-2 px-4 py-2 rounded-xl font-bold hover:bg-black transition shadow-lg text-sm"
                     >
                       تعديل البيانات
                     </button>
                     <button 
                       onClick={exportCustomerStatementPDF}
-                      className="bg-indigo-600 text-white flex items-center gap-2 px-4 py-2.5 rounded-2xl font-bold hover:bg-indigo-700 transition shadow-lg shadow-indigo-100"
+                      className="bg-indigo-600 text-white flex items-center gap-2 px-4 py-2 rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg shadow-indigo-100 text-sm"
                     >
-                      <FileText size={18} /> تحميل بيان حساب
+                      <FileText size={16} /> تحميل بيان حساب
                     </button>
                   </>
                 )}
                 <button 
                   onClick={() => setIsModalOpen(false)}
-                  className="bg-slate-100 text-slate-400 hover:text-slate-600 p-3 rounded-2xl transition-colors"
+                  className="bg-slate-100 text-slate-400 hover:text-slate-600 p-2 rounded-xl transition-colors"
                 >
-                  <X size={24} />
+                  <X size={20} />
                 </button>
               </div>
             </div>
