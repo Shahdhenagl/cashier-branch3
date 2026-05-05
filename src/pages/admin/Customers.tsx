@@ -375,28 +375,38 @@ export default function Customers() {
                   )}
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-3 items-center">
                 {isEditMode ? (
-                   <button 
-                    onClick={handleUpdateCustomer}
-                    className="bg-emerald-600 text-white flex items-center gap-2 px-6 py-2.5 rounded-2xl font-bold hover:bg-emerald-700 transition shadow-lg"
-                  >
-                    حفظ التعديلات
-                  </button>
+                  <>
+                    <button 
+                      onClick={() => setIsEditMode(false)}
+                      className="bg-slate-100 text-slate-600 px-6 py-2.5 rounded-2xl font-bold hover:bg-slate-200 transition"
+                    >
+                      إلغاء
+                    </button>
+                    <button 
+                      onClick={handleUpdateCustomer}
+                      className="bg-emerald-600 text-white flex items-center gap-2 px-6 py-2.5 rounded-2xl font-bold hover:bg-emerald-700 transition shadow-lg shadow-emerald-100"
+                    >
+                      حفظ التعديلات
+                    </button>
+                  </>
                 ) : (
-                  <button 
-                    onClick={() => setIsEditMode(true)}
-                    className="bg-slate-800 text-white flex items-center gap-2 px-6 py-2.5 rounded-2xl font-bold hover:bg-black transition shadow-lg"
-                  >
-                    تعديل البيانات
-                  </button>
+                  <>
+                    <button 
+                      onClick={() => setIsEditMode(true)}
+                      className="bg-slate-800 text-white flex items-center gap-2 px-6 py-2.5 rounded-2xl font-bold hover:bg-black transition shadow-lg"
+                    >
+                      تعديل البيانات
+                    </button>
+                    <button 
+                      onClick={exportCustomerStatementPDF}
+                      className="bg-indigo-600 text-white flex items-center gap-2 px-4 py-2.5 rounded-2xl font-bold hover:bg-indigo-700 transition shadow-lg shadow-indigo-100"
+                    >
+                      <FileText size={18} /> تحميل بيان حساب
+                    </button>
+                  </>
                 )}
-                <button 
-                  onClick={exportCustomerStatementPDF}
-                  className="bg-indigo-600 text-white flex items-center gap-2 px-4 py-2.5 rounded-2xl font-bold hover:bg-indigo-700 transition shadow-lg shadow-indigo-100"
-                >
-                  <FileText size={18} /> تحميل بيان حساب
-                </button>
                 <button 
                   onClick={() => setIsModalOpen(false)}
                   className="bg-slate-100 text-slate-400 hover:text-slate-600 p-3 rounded-2xl transition-colors"
