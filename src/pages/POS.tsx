@@ -302,7 +302,7 @@ export default function POS() {
   const currentPaid = paidAmountStr === '' ? total : parseFloat(paidAmountStr) || 0;
   const remaining = total - currentPaid;
 
-  // Sync customer info and debt calculation
+  // Sync customer debt calculation only
   useEffect(() => {
     if (!customerPhone && !customerId) {
       setCustomerDebt(0);
@@ -314,10 +314,6 @@ export default function POS() {
     );
 
     if (existingCust) {
-      setCustomerName(existingCust.name);
-      if (customerPhone !== existingCust.phone) setCustomerPhone(existingCust.phone);
-      if (customerId !== existingCust.custom_id) setCustomerId(existingCust.custom_id || '');
-      
       const cOrders = orders.filter(o => o.customer?.id === existingCust.id);
       const cDebt = cOrders.reduce((sum, o) => {
         const returnedValue = o.items.reduce((rSum, item) => rSum + (item.returned_quantity * item.sale_price), 0);
@@ -330,11 +326,27 @@ export default function POS() {
   }, [customerPhone, customerId, orders, customers]);
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setCustomerPhone(e.target.value);
+    const val = e.target.value;
+    setCustomerPhone(val);
+    if (val) {
+      const match = customers.find(c => c.phone === val);
+      if (match) {
+        setCustomerName(match.name);
+        setCustomerId(match.custom_id || '');
+      }
+    }
   };
 
   const handleIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setCustomerId(e.target.value);
+    const val = e.target.value;
+    setCustomerId(val);
+    if (val) {
+      const match = customers.find(c => c.custom_id === val);
+      if (match) {
+        setCustomerName(match.name);
+        setCustomerPhone(match.phone);
+      }
+    }
   };
 
 
