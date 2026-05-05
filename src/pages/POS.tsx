@@ -5,7 +5,7 @@ import { normalizeArabic } from '../utils/textUtils';
 
 
 export default function POS() {
-  const { products, categories, cart, addToCart, removeFromCart, updateQuantity, clearCart, checkout, processReturn, storeSettings, orders, activeInvoiceId, customers } = useStore();
+  const { products, categories, cart, addToCart, removeFromCart, updateQuantity, updatePrice, clearCart, checkout, processReturn, storeSettings, orders, activeInvoiceId, customers } = useStore();
   
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -14,6 +14,7 @@ export default function POS() {
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [paidAmountStr, setPaidAmountStr] = useState('');
+  const [discountStr, setDiscountStr] = useState('');
   const [customerDebt, setCustomerDebt] = useState<number>(0);
   
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -170,10 +171,11 @@ export default function POS() {
     <tbody>${itemsHtml}</tbody>
   </table>
 
-  <div class="summary-section">
-    <div class="summary-row"><span>المجموع الفرعي:</span><span>${orderDetails.subtotal.toFixed(2)} ${currentSettings.currency}</span></div>
-    <div class="summary-row"><span>الضريبة (${currentSettings.taxRate}%):</span><span>${orderDetails.tax.toFixed(2)} ${currentSettings.currency}</span></div>
-    <div class="summary-row total"><span>الإجمالي النهائي:</span><span>${orderDetails.total.toFixed(2)} ${currentSettings.currency}</span></div>
+    <div class="summary-section">
+      <div class="summary-row"><span>المجموع الفرعي:</span><span>${orderDetails.subtotal.toFixed(2)} ${currentSettings.currency}</span></div>
+      ${orderDetails.discount > 0 ? `<div class="summary-row" style="color:#e53e3e;font-weight:700;"><span>🏷️ الخصم:</span><span>- ${orderDetails.discount.toFixed(2)} ${currentSettings.currency}</span></div>` : ''}
+      <div class="summary-row"><span>الضريبة (${currentSettings.taxRate}%):</span><span>${orderDetails.tax.toFixed(2)} ${currentSettings.currency}</span></div>
+      <div class="summary-row total"><span>الإجمالي النهائي:</span><span>${orderDetails.total.toFixed(2)} ${currentSettings.currency}</span></div>
     
     ${(orderDetails.paidAmount !== undefined && orderDetails.paidAmount < orderDetails.total) ? `
       <div class="payment-status status-debt">
@@ -210,6 +212,7 @@ export default function POS() {
   const doCheckout = async (shouldPrint: boolean, method: typeof paymentMethod) => {
     const currentCart = [...cart];
     const currentSubtotal = subtotal;
+    const currentDiscount = discount;
     const currentTax = tax;
     const currentTotal = total;
     const currentCustomerName = customerName;
@@ -227,6 +230,7 @@ export default function POS() {
     const details: any = {
       cart: currentCart,
       subtotal: currentSubtotal,
+      discount: currentDiscount,
       tax: currentTax,
       total: currentTotal,
       paidAmount: finalPaidAmount,
@@ -250,6 +254,7 @@ export default function POS() {
     setCustomerName('');
     setCustomerPhone('');
     setPaidAmountStr('');
+    setDiscountStr('');
     setPaymentMethod('cash');
     setCustomerDebt(0);
     setShowCustomerSuggestions(false);
@@ -283,8 +288,10 @@ export default function POS() {
   );
 
   const subtotal = cart.reduce((sum, item) => sum + item.sale_price * item.quantity, 0);
-  const tax = subtotal * (storeSettings.taxRate / 100);
-  const total = subtotal + tax;
+  const discount = Math.min(parseFloat(discountStr) || 0, subtotal);
+  const discountedSubtotal = subtotal - discount;
+  const tax = discountedSubtotal * (storeSettings.taxRate / 100);
+  const total = discountedSubtotal + tax;
 
   const currentPaid = paidAmountStr === '' ? total : parseFloat(paidAmountStr) || 0;
   const remaining = total - currentPaid;
@@ -765,7 +772,22 @@ export default function POS() {
                   </button>
                 </div>
                 <div className="flex items-center justify-between pt-3 mt-1 border-t border-gray-50 dark:border-slate-700/50">
-                  <span className="font-black text-xl text-indigo-600 dark:text-indigo-400">{(item.sale_price * item.quantity).toFixed(2)} <span className="text-xs text-gray-500">{storeSettings.currency}</span></span>
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">سعر الوحدة:</label>
+                      <input 
+                        type="number"
+                        dir="ltr"
+                        value={item.sale_price}
+                        onChange={(e) => updatePrice(item.id, parseFloat(e.target.value) || 0)}
+                        className="w-20 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border-none rounded-lg px-2 py-1 text-sm font-black focus:ring-1 focus:ring-indigo-400 transition text-center"
+                      />
+                    </div>
+                    <span className="font-black text-xl text-indigo-600 dark:text-indigo-400">
+                      {(item.sale_price * item.quantity).toFixed(2)} <span className="text-xs text-gray-500">{storeSettings.currency}</span>
+                    </span>
+                  </div>
+                  
                   <div className="flex items-center bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl p-1 shadow-inner">
                     <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="p-2 hover:bg-white dark:hover:bg-slate-600 rounded-lg text-gray-600 dark:text-gray-300 transition-colors shadow-sm">
                       <Minus size={16} strokeWidth={3}/>
@@ -789,6 +811,25 @@ export default function POS() {
             <div className="flex justify-between text-gray-500 dark:text-gray-400 font-semibold text-sm">
                <span>المجموع الفرعي</span>
               <span>{subtotal.toFixed(2)} {storeSettings.currency}</span>
+            </div>
+
+            {/* Discount Row */}
+            <div className="flex gap-3 items-center pb-1">
+              <label className="text-xs font-bold text-orange-500 whitespace-nowrap flex items-center gap-1">
+                🏷️ خصم
+              </label>
+              <input
+                type="number"
+                dir="ltr"
+                min="0"
+                value={discountStr}
+                onChange={(e) => setDiscountStr(e.target.value)}
+                placeholder="0.00"
+                className="flex-1 bg-white dark:bg-slate-800 border border-orange-200 dark:border-orange-700 py-1.5 px-3 rounded-lg focus:ring-2 focus:ring-orange-400 font-bold text-sm focus:outline-none transition text-left placeholder-gray-300"
+              />
+              {discount > 0 && (
+                <span className="text-orange-500 font-black text-sm whitespace-nowrap">- {discount.toFixed(2)}</span>
+              )}
             </div>
             {storeSettings.taxRate > 0 && (
               <div className="flex justify-between text-gray-500 dark:text-gray-400 font-semibold text-sm pb-4 border-b border-gray-200 dark:border-slate-700">

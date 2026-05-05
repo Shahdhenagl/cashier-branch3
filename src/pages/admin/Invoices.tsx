@@ -18,7 +18,8 @@ export default function Invoices() {
     const printDate = new Date(order.date).toLocaleString('ar-SA');
     const isPayment = order.type === 'payment';
     const subtotal = order.items.reduce((sum: number, item: any) => sum + (item.sale_price * item.quantity), 0);
-    const taxValue = order.total - subtotal;
+    const discountValue = Math.max(0, subtotal - order.total);
+    const taxValue = Math.max(0, order.total - (subtotal - discountValue));
     
     let itemsHtml = '';
     if (isPayment) {
@@ -133,6 +134,7 @@ export default function Invoices() {
         </div>
       ` : `
         <div class="summary-row"><span>المجموع الفرعي:</span><span>${subtotal.toFixed(2)} ${storeSettings.currency}</span></div>
+        ${discountValue > 0 ? `<div class="summary-row" style="color:#e53e3e;font-weight:700;"><span>🏷️ الخصم:</span><span>- ${discountValue.toFixed(2)} ${storeSettings.currency}</span></div>` : ''}
         <div class="summary-row"><span>الضريبة (${storeSettings.taxRate}%):</span><span>${taxValue.toFixed(2)} ${storeSettings.currency}</span></div>
         <div class="summary-row total"><span>الإجمالي النهائي:</span><span>${order.total.toFixed(2)} ${storeSettings.currency}</span></div>
         
