@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '../../store/useStore';
-import { UserPlus, UserCircle, Phone, Lock, Trash2, Edit, Camera, Save, X } from 'lucide-react';
+import { UserPlus, UserCircle, Phone, Lock, Trash2, Edit, Save, X } from 'lucide-react';
 
 export default function Cashiers() {
   const { cashiers, loadCashiers, addCashier, updateCashier, deleteCashier, storeSettings } = useStore();

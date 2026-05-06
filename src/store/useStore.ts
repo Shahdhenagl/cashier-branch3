@@ -43,7 +43,7 @@ export interface Cashier {
   id: string;
   name: string;
   password?: string;
-  pin: string;
+  pin?: string;
   phone: string;
   photo_url: string;
   created_at: string;
@@ -361,7 +361,7 @@ export const useStore = create<CashierStore>((set, get) => ({
         isLoading: false,
         activeCashier: sessionStorage.getItem('active_cashier_name') 
           ? ((cashiersRes.data ?? []) as Cashier[]).find(c => c.name === sessionStorage.getItem('active_cashier_name')) || null
-          : (sessionStorage.getItem('cashier_pos_auth') === 'true' ? { id: 'master', name: 'المدير', pin: '123456', phone: '', photo: '', created_at: '' } : null)
+          : (sessionStorage.getItem('cashier_pos_auth') === 'true' ? { id: 'master', name: 'المدير', pin: '123456', phone: '', photo_url: '', created_at: '' } : null)
       });
 
       // Fetch expenses separately to avoid breaking the whole loadAll if the table is missing
