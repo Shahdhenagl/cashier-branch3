@@ -322,7 +322,6 @@ export default function POS() {
 
   const currentPaid = (parseFloat(paidCash) || 0) + (parseFloat(paidVisa) || 0) + (parseFloat(paidWallet) || 0) + (parseFloat(paidInstapay) || 0);
   const isAnyPaid = paidCash || paidVisa || paidWallet || paidInstapay;
-  const effectivePaid = isAnyPaid ? currentPaid : total;
 
   // Sync customer debt calculation only
   useEffect(() => {
