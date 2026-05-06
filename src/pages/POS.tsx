@@ -323,7 +323,6 @@ export default function POS() {
   const currentPaid = (parseFloat(paidCash) || 0) + (parseFloat(paidVisa) || 0) + (parseFloat(paidWallet) || 0) + (parseFloat(paidInstapay) || 0);
   const isAnyPaid = paidCash || paidVisa || paidWallet || paidInstapay;
   const effectivePaid = isAnyPaid ? currentPaid : total;
-  const remaining = total - effectivePaid;
 
   // Sync customer debt calculation only
   useEffect(() => {
@@ -943,7 +942,7 @@ export default function POS() {
               </button>
               <button 
                 onClick={() => {
-                  handleCheckout(shouldPrint);
+                  handleCheckoutClick(shouldPrint);
                   setShowCheckoutModal(false);
                 }}
                 className="flex-[2] py-4 px-6 bg-indigo-600 text-white rounded-2xl font-black shadow-lg shadow-indigo-200 dark:shadow-none hover:bg-indigo-700 transition-all active:scale-95 flex items-center justify-center gap-2"
