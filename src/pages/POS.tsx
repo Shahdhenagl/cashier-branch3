@@ -717,30 +717,30 @@ export default function POS() {
           </div>
 
           {/* Customer Inputs Grid */}
-          <div className="relative grid grid-cols-3 gap-2 text-sm">
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-bold text-white/70 mr-1 flex items-center gap-1"><CreditCard size={10}/> رقم الكارت</label>
+          <div className="relative flex gap-1.5 text-sm h-11">
+            <div className="flex-1 relative group">
+              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-indigo-400 group-focus-within:scale-110 transition-transform"><CreditCard size={14}/></span>
               <input 
                 type="text" dir="ltr" value={customerId} onChange={handleIdChange} 
-                className="w-full bg-white/95 text-indigo-600 dark:text-indigo-400 placeholder-slate-400 border-0 py-2.5 px-3 rounded-xl focus:ring-2 focus:ring-white focus:outline-none transition font-black shadow-inner text-sm" 
-                placeholder="ID" 
+                className="w-full bg-white/95 text-indigo-600 dark:text-indigo-400 placeholder-slate-400 border-0 py-2 pr-8 pl-2 rounded-xl focus:ring-2 focus:ring-white focus:outline-none transition font-black shadow-inner text-xs h-full" 
+                placeholder="رقم الكارت" 
               />
             </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-bold text-white/70 mr-1 flex items-center gap-1"><Smartphone size={10}/> الموبايل</label>
+            <div className="flex-1 relative group">
+              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:scale-110 transition-transform"><Smartphone size={14}/></span>
               <input 
                 type="text" dir="ltr" value={customerPhone} onChange={handlePhoneChange} 
-                className="w-full bg-white/95 text-slate-800 placeholder-slate-400 border-0 py-2.5 px-3 rounded-xl focus:ring-2 focus:ring-white focus:outline-none transition font-medium shadow-inner text-sm" 
-                placeholder="01xxx" 
+                className="w-full bg-white/95 text-slate-800 placeholder-slate-400 border-0 py-2 pr-8 pl-2 rounded-xl focus:ring-2 focus:ring-white focus:outline-none transition font-medium shadow-inner text-xs h-full" 
+                placeholder="الموبايل" 
               />
             </div>
-            <div className="flex flex-col gap-1 relative">
-              <label className="text-[10px] font-bold text-white/70 mr-1 flex items-center gap-1"><ShoppingCart size={10}/> العميل</label>
+            <div className="flex-[1.2] relative group">
+              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:scale-110 transition-transform"><ShoppingCart size={14}/></span>
               <input 
                 type="text" value={customerName} 
                 onChange={e => { setCustomerName(e.target.value); setShowCustomerSuggestions(true); }} 
                 onFocus={() => setShowCustomerSuggestions(true)}
-                className="w-full bg-white/95 text-slate-800 placeholder-slate-400 border-0 py-2.5 px-3 rounded-xl focus:ring-2 focus:ring-white focus:outline-none transition font-medium shadow-inner text-sm" 
+                className="w-full bg-white/95 text-slate-800 placeholder-slate-400 border-0 py-2 pr-8 pl-2 rounded-xl focus:ring-2 focus:ring-white focus:outline-none transition font-medium shadow-inner text-xs h-full" 
                 placeholder="الاسم" 
               />
               {showCustomerSuggestions && filteredCustomers.length > 0 && (
@@ -750,7 +750,7 @@ export default function POS() {
                       key={c.id} onClick={() => handleSelectCustomer(c)}
                       className="w-full text-right px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 flex items-center justify-between border-b border-gray-50 dark:border-slate-700 last:border-0"
                     >
-                      <div className="flex flex-col">
+                      <div className="flex flex-col text-right">
                         <span className="font-bold text-slate-800 dark:text-slate-100">{c.name}</span>
                         <span className="text-[10px] text-slate-400 font-mono" dir="ltr">{c.phone}</span>
                       </div>
@@ -854,54 +854,44 @@ export default function POS() {
               </div>
             )}
             <div className="flex justify-between items-end mb-4 pt-4 border-t border-slate-200/50">
-              <span className="text-sm font-black text-slate-400">الإجمالي النهائي</span>
+              <span className="text-xs font-bold text-slate-400">الإجمالي النهائي</span>
               <span className="text-4xl font-black text-indigo-600 dark:text-indigo-400 tracking-tighter">
                 {total.toFixed(2)} <span className="text-sm text-slate-400 font-bold tracking-normal">{storeSettings.currency}</span>
               </span>
             </div>
             
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               <div className="flex items-center justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
-                <span>طرق الدفع</span>
-                <span className="text-indigo-600">تقسيم المبلغ</span>
+                <span>توزيع المبلغ المدفوع</span>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="group relative">
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors"><Banknote size={14}/></span>
-                  <input 
-                    type="number" dir="ltr" value={paidCash} onChange={(e) => setPaidCash(e.target.value)} placeholder="كاش"
-                    className="w-full bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 py-2.5 pr-9 pl-3 rounded-2xl focus:border-indigo-500 focus:outline-none transition-all font-black text-sm text-left" 
-                  />
-                </div>
-                <div className="group relative">
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-500 transition-colors"><CreditCard size={14}/></span>
-                  <input 
-                    type="number" dir="ltr" value={paidVisa} onChange={(e) => setPaidVisa(e.target.value)} placeholder="فيزا"
-                    className="w-full bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 py-2.5 pr-9 pl-3 rounded-2xl focus:border-blue-500 focus:outline-none transition-all font-black text-sm text-left" 
-                  />
-                </div>
-                <div className="group relative">
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-emerald-500 transition-colors"><Smartphone size={14}/></span>
-                  <input 
-                    type="number" dir="ltr" value={paidWallet} onChange={(e) => setPaidWallet(e.target.value)} placeholder="محفظة"
-                    className="w-full bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 py-2.5 pr-9 pl-3 rounded-2xl focus:border-emerald-500 focus:outline-none transition-all font-black text-sm text-left" 
-                  />
-                </div>
-                <div className="group relative">
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-orange-500 transition-colors"><Zap size={14}/></span>
-                  <input 
-                    type="number" dir="ltr" value={paidInstapay} onChange={(e) => setPaidInstapay(e.target.value)} placeholder="انستا"
-                    className="w-full bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 py-2.5 pr-9 pl-3 rounded-2xl focus:border-orange-500 focus:outline-none transition-all font-black text-sm text-left" 
-                  />
-                </div>
+              
+              <div className="space-y-2">
+                {[
+                  { label: 'كاش', val: paidCash, set: setPaidCash, icon: <Banknote size={14}/>, color: 'indigo' },
+                  { label: 'فيزا', val: paidVisa, set: setPaidVisa, icon: <CreditCard size={14}/>, color: 'blue' },
+                  { label: 'محفظة', val: paidWallet, set: setPaidWallet, icon: <Smartphone size={14}/>, color: 'emerald' },
+                  { label: 'انستا', val: paidInstapay, set: setPaidInstapay, icon: <Zap size={14}/>, color: 'orange' }
+                ].map((p, idx) => (
+                  <div key={idx} className="flex items-center gap-3 bg-white dark:bg-slate-800 p-1.5 pr-3 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm focus-within:border-indigo-300 transition-colors group">
+                    <span className="text-slate-400 group-focus-within:text-indigo-500">{p.icon}</span>
+                    <span className="text-xs font-bold text-slate-500 min-w-[45px]">{p.label}</span>
+                    <input 
+                      type="number" dir="ltr" value={p.val} onChange={(e) => p.set(e.target.value)} placeholder="0.00"
+                      className="flex-1 bg-transparent border-0 py-1.5 px-0 text-sm font-black focus:ring-0 text-left" 
+                    />
+                  </div>
+                ))}
               </div>
 
-              <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 flex justify-between items-center">
-                <span className="text-xs font-bold text-slate-500">إجمالي المدفوع: {effectivePaid.toFixed(2)}</span>
+              <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-100/50 dark:bg-slate-900/50 p-3 rounded-2xl">
                 <div className="text-right">
-                  <span className="text-[10px] text-slate-500 block font-bold">{remaining > 0 ? 'متبقي (آجل)' : 'الباقي'}</span>
+                  <span className="text-[10px] text-slate-400 block font-bold">المدفوع</span>
+                  <span className="text-sm font-black text-slate-700 dark:text-slate-200">{effectivePaid.toFixed(2)}</span>
+                </div>
+                <div className="text-left">
+                  <span className="text-[10px] text-slate-400 block font-bold">{remaining > 0 ? 'متبقي (آجل)' : 'الباقي'}</span>
                   <div className={`text-lg font-black ${remaining > 0 ? 'text-red-500' : 'text-emerald-600'}`}>
-                    {Math.abs(remaining).toFixed(2)} <span className="text-xs font-normal">{storeSettings.currency}</span>
+                    {Math.abs(remaining).toFixed(2)}
                   </div>
                 </div>
               </div>
