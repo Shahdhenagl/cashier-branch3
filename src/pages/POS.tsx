@@ -30,9 +30,7 @@ export default function POS() {
   const [lastCustomerInfo, setLastCustomerInfo] = useState<any>(null);
   const [lastOrderDetails, setLastOrderDetails] = useState<any>(null);
   const [showCustomerSuggestions, setShowCustomerSuggestions] = useState(false);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [pendingShouldPrint, setPendingShouldPrint] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'visa' | 'wallet' | 'instapay'>('cash');
+  const [showCustomerSuggestions, setShowCustomerSuggestions] = useState(false);
 
   useEffect(() => {
     if (isDarkMode) {

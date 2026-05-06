@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useStore, type Expense } from '../../store/useStore';
+import { useStore, type Expense, type Order, type PurchaseInvoice } from '../../store/useStore';
 import { 
   Wallet, Plus, Trash2, Search, ArrowUp, ArrowDown, 
   Calendar, Edit3, X, Download, TrendingUp, CreditCard, Smartphone, Zap, 
