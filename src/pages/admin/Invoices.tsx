@@ -111,7 +111,7 @@ export default function Invoices() {
           </div>
         </div>
       </div>
-      <div class="invoice-title-badge">${isPayment ? 'إيصال سداد' : 'فاتورة ضريبية'}</div>
+      <div class="invoice-title-badge">${isPayment ? 'إيصال سداد' : 'فاتورة بيع'}</div>
     </div>
 
     ${customerBlock}
@@ -128,10 +128,11 @@ export default function Invoices() {
     </table>
 
     <div class="summary-section">
-      ${isPayment ? `
+      ${!isPayment ? `
       <div class="summary-row"><span>المجموع الفرعي:</span><span>${subtotal.toFixed(2)} ${storeSettings.currency}</span></div>
       <div class="summary-row"><span>الضريبة (${storeSettings.taxRate}%):</span><span>${taxValue.toFixed(2)} ${storeSettings.currency}</span></div>
       <div class="summary-row total"><span>الإجمالي النهائي:</span><span>${order.total.toFixed(2)} ${storeSettings.currency}</span></div>
+      ` : ''}
       <div class="summary-row" style="margin-top:4px;color:#059669;font-weight:bold;"><span>المبلغ المدفوع:</span><span>${order.paid_amount.toFixed(2)} ${storeSettings.currency}</span></div>
       
       <div style="margin-top:10px; padding:8px; background:#f9fafb; border-radius:8px; border:1px solid #eee;">
@@ -142,13 +143,13 @@ export default function Invoices() {
         ${order.paid_instapay > 0 ? `<div class="summary-row" style="font-size:11px;"><span>⚡ انستا باي:</span><span>${order.paid_instapay.toFixed(2)}</span></div>` : ''}
       </div>
 
-      ${order.paid_amount < order.total ? `
+      ${(!isPayment && order.paid_amount < order.total) ? `
         <div class="payment-status status-debt" style="margin-top:10px;">
           <div>متبقي للتحصيل (آجل): ${(order.total - order.paid_amount).toFixed(2)} ${storeSettings.currency}</div>
         </div>
-      ` : `
+      ` : !isPayment ? `
         <div class="payment-status status-paid" style="margin-top:10px;">✓ تم سداد الفاتورة بالكامل</div>
-      `}
+      ` : ''}
     </div>
 
     <div class="footer">شكراً لثقتكم بنا - ${storeSettings.name} ترحب بكم دائماً</div>

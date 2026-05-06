@@ -44,10 +44,10 @@ export default function Customers() {
       }, 0);
     }, 0);
 
-    // Debt = Original Total - Paid Amount
-    // Returns are handled as separate cash refunds and do not affect the original debt.
+    // Debt = (Original Total - Returns) - Paid Amount
     const totalDebt = Math.max(0, customerOrders.reduce((sum, o) => {
-      return sum + (o.total - o.paid_amount);
+      const returnedValue = o.items.reduce((s, i) => s + (i.returned_quantity * i.sale_price), 0);
+      return sum + ((o.total - returnedValue) - o.paid_amount);
     }, 0));
 
     return { customerOrders, totalSpent, totalProfit, totalDebt, totalReturns };

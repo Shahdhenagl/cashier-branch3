@@ -20,9 +20,9 @@ export default function DeferredAccounts() {
   const customersWithDebt = customers.map(c => {
     const customerOrders = orders.filter(o => o.customer?.id === c.id);
     const totalDebt = Math.max(0, customerOrders.reduce((sum, o) => {
-      // Debt = Original Total - Paid Amount
-      // Returns do not affect the debt because they are refunded in cash.
-      return sum + (o.total - o.paid_amount);
+      // Debt = (Original Total - Returns) - Paid Amount
+      const returnedValue = o.items.reduce((s, i) => s + (i.returned_quantity * i.sale_price), 0);
+      return sum + ((o.total - returnedValue) - o.paid_amount);
     }, 0));
     
     return { 

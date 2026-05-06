@@ -246,7 +246,7 @@ export default function POS() {
       return;
     }
 
-    const invoiceId = await checkout(currentTotal, { name: currentCustomerName, phone: currentCustomerPhone, custom_id: currentCustomId }, finalPaidAmount, 'sale', method);
+    const invoiceId = await checkout(currentTotal, { name: currentCustomerName, phone: currentCustomerPhone, custom_id: currentCustomId }, effectivePaidAmount, 'sale', primaryMethod, effectiveSplit);
     
     const details: any = {
       cart: currentCart,
@@ -340,13 +340,30 @@ export default function POS() {
     if (existingCust) {
       const cOrders = orders.filter(o => o.customer?.id === existingCust.id);
       const cDebt = cOrders.reduce((sum, o) => {
-        return sum + (o.total - o.paid_amount);
+        const returnedValue = o.items.reduce((s, i) => s + (i.returned_quantity * i.sale_price), 0);
+        return sum + Math.max(0, (o.total - returnedValue) - o.paid_amount);
       }, 0);
       setCustomerDebt(cDebt > 0 ? cDebt : 0);
     } else {
       setCustomerDebt(0);
     }
   }, [customerPhone, customerId, orders, customers]);
+
+  const handleReturnAll = async () => {
+    if (!activeReturnOrder) return;
+    if (!confirm("هل أنت متأكد من رغبتك في استرجاع الفاتورة بالكامل؟")) return;
+
+    for (const item of activeReturnOrder.items) {
+      const available = item.quantity - item.returned_quantity;
+      if (available > 0) {
+        await processReturn(activeReturnOrder.id, item.id, available);
+      }
+    }
+    
+    alert('تم استرجاع الفاتورة بالكامل بنجاح');
+    const updatedOrder = useStore.getState().orders.find(o => o.id === activeReturnOrder.id);
+    setActiveReturnOrder(updatedOrder);
+  };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -527,8 +544,16 @@ export default function POS() {
 
                     <div className="flex-1 border border-gray-200 dark:border-slate-700 flex flex-col rounded-xl overflow-hidden">
                       <div className="bg-gray-100 dark:bg-slate-700 p-4 flex justify-between items-center border-b border-gray-200 dark:border-slate-600">
-                        <span className="font-bold text-gray-700 dark:text-gray-200 font-mono tracking-wider">الأصناف المتاحة للإرجاع</span>
-                        <span className="text-xs font-bold px-2 py-1 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-600">رقم الفاتورة: #{activeReturnOrder.id}</span>
+                        <div className="flex flex-col">
+                          <span className="font-bold text-gray-700 dark:text-gray-200 font-mono tracking-wider">الأصناف المتاحة للإرجاع</span>
+                          <span className="text-[10px] text-slate-500 font-bold">رقم الفاتورة: #{activeReturnOrder.id}</span>
+                        </div>
+                        <button 
+                          onClick={handleReturnAll}
+                          className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl text-xs font-black shadow-lg transition-all"
+                        >
+                          إرجاع الفاتورة بالكامل
+                        </button>
                       </div>
                       <div className="p-4 space-y-3 max-h-72 overflow-y-auto hide-scrollbar">
                         {activeReturnOrder.items.map((item: any) => (

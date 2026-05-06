@@ -77,9 +77,10 @@ export default function Finance() {
 
   // 3. Payment Method Breakdown (Daily)
   const getDailyByMethod = (method: string) => {
-    const inc = dailyOrders.filter(o => o.payment_method === method).reduce((sum, o) => sum + o.paid_amount, 0);
-    const outExp = dailyExpenses.filter(e => e.payment_method === method).reduce((sum, e) => sum + e.amount, 0);
-    const outPur = dailyPurchases.filter(inv => inv.payment_method === method).reduce((sum, inv) => sum + inv.paid_amount, 0);
+    const field = `paid_${method}` as keyof Order | keyof Expense | keyof PurchaseInvoice;
+    const inc = dailyOrders.reduce((sum, o) => sum + ((o as any)[field] || 0), 0);
+    const outExp = dailyExpenses.reduce((sum, e) => sum + ((e as any)[field] || 0), 0);
+    const outPur = dailyPurchases.reduce((sum, inv) => sum + ((inv as any)[field] || 0), 0);
     return inc - outExp - outPur;
   };
 
