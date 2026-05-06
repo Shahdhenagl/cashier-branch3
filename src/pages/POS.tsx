@@ -30,7 +30,8 @@ export default function POS() {
   const [lastCustomerInfo, setLastCustomerInfo] = useState<any>(null);
   const [lastOrderDetails, setLastOrderDetails] = useState<any>(null);
   const [showCustomerSuggestions, setShowCustomerSuggestions] = useState(false);
-  const [showSplit, setShowSplit] = useState(false);
+  const [showCheckoutModal, setShowCheckoutModal] = useState(false);
+  const [shouldPrint, setShouldPrint] = useState(false);
 
   useEffect(() => {
     if (isDarkMode) {
@@ -822,10 +823,8 @@ export default function POS() {
 
 
 
-        {/* Footer Checkout */}
-        <div className="p-3 bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700 shadow-2xl">
-          <div className="space-y-2 mb-3">
-            <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 px-1">
+          <div className="space-y-2 mb-3 px-1">
+            <div className="flex justify-between items-center text-[10px] font-bold text-slate-400">
                <span>المجموع: {subtotal.toFixed(2)}</span>
                <div className="flex items-center gap-1.5">
                  <span>خصم:</span>
@@ -833,87 +832,127 @@ export default function POS() {
                </div>
             </div>
 
-            <div className="flex justify-between items-center py-2 border-y border-slate-100 dark:border-slate-700/50">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">الإجمالي</span>
+            <div className="flex justify-between items-center pt-2 border-t border-slate-100 dark:border-slate-700/50">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">الإجمالي النهائي</span>
               <span className="text-2xl font-black text-indigo-600 dark:text-indigo-400 tracking-tighter">
                 {total.toFixed(2)} <span className="text-[10px] text-slate-400 font-bold tracking-normal">{storeSettings.currency}</span>
               </span>
-            </div>
-            
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">
-                <span>طريقة الدفع</span>
-                <button onClick={() => setShowSplit(!showSplit)} className="text-indigo-600 hover:underline">{showSplit ? 'إخفاء التقسيم' : 'تقسيم المبلغ'}</button>
-              </div>
-              
-              <div className={showSplit ? 'grid grid-cols-2 gap-2' : 'block'}>
-                <div className="relative group">
-                  <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500"><Banknote size={12}/></span>
-                  <input 
-                    type="number" dir="ltr" value={paidCash} onChange={(e) => setPaidCash(e.target.value)} placeholder="كاش"
-                    className="w-full bg-slate-50 dark:bg-slate-900 border border-transparent focus:border-indigo-300 py-2 pr-8 pl-2 rounded-xl focus:outline-none transition-all font-black text-xs text-left shadow-inner" 
-                  />
-                </div>
-                {showSplit && (
-                  <>
-                    <div className="relative group">
-                      <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-500"><CreditCard size={12}/></span>
-                      <input 
-                        type="number" dir="ltr" value={paidVisa} onChange={(e) => setPaidVisa(e.target.value)} placeholder="فيزا"
-                        className="w-full bg-slate-50 dark:bg-slate-900 border border-transparent focus:border-blue-300 py-2 pr-8 pl-2 rounded-xl focus:outline-none transition-all font-black text-xs text-left shadow-inner" 
-                      />
-                    </div>
-                    <div className="relative group">
-                      <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-emerald-500"><Smartphone size={12}/></span>
-                      <input 
-                        type="number" dir="ltr" value={paidWallet} onChange={(e) => setPaidWallet(e.target.value)} placeholder="محفظة"
-                        className="w-full bg-slate-50 dark:bg-slate-900 border border-transparent focus:border-emerald-300 py-2 pr-8 pl-2 rounded-xl focus:outline-none transition-all font-black text-xs text-left shadow-inner" 
-                      />
-                    </div>
-                    <div className="relative group">
-                      <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-orange-500"><Zap size={12}/></span>
-                      <input 
-                        type="number" dir="ltr" value={paidInstapay} onChange={(e) => setPaidInstapay(e.target.value)} placeholder="انستا"
-                        className="w-full bg-slate-50 dark:bg-slate-900 border border-transparent focus:border-orange-300 py-2 pr-8 pl-2 rounded-xl focus:outline-none transition-all font-black text-xs text-left shadow-inner" 
-                      />
-                    </div>
-                  </>
-                )}
-              </div>
-
-              <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-900/50 px-3 py-1.5 rounded-xl text-[10px]">
-                <span className="font-bold text-slate-400">المدفوع: <span className="text-slate-800 dark:text-slate-200">{((parseFloat(paidCash || '0') + parseFloat(paidVisa || '0') + parseFloat(paidWallet || '0') + parseFloat(paidInstapay || '0'))).toFixed(2)}</span></span>
-                <span className={`font-black ${total - (parseFloat(paidCash || '0') + parseFloat(paidVisa || '0') + parseFloat(paidWallet || '0') + parseFloat(paidInstapay || '0')) > 0 ? 'text-red-500' : 'text-emerald-600'}`}>
-                  {total - (parseFloat(paidCash || '0') + parseFloat(paidVisa || '0') + parseFloat(paidWallet || '0') + parseFloat(paidInstapay || '0')) > 0 ? 'متبقي: ' : 'الباقي: '} {Math.abs(total - (parseFloat(paidCash || '0') + parseFloat(paidVisa || '0') + parseFloat(paidWallet || '0') + parseFloat(paidInstapay || '0'))).toFixed(2)}
-                </span>
-              </div>
             </div>
           </div>
 
           <div className="flex gap-2">
             <button
-              onClick={() => handleCheckout(false)}
+              onClick={() => { setShouldPrint(false); setShowCheckoutModal(true); }}
               disabled={cart.length === 0}
               style={cart.length > 0 ? { background: storeSettings.themeColor } : {}}
-              className="flex-1 disabled:bg-gray-300 text-white py-3 rounded-2xl font-black flex items-center justify-center gap-2 transition-all text-sm active:scale-95 shadow-md"
+              className="flex-1 disabled:bg-gray-300 text-white py-3.5 rounded-2xl font-black flex flex-col items-center justify-center gap-0.5 transition-all text-xs active:scale-95 shadow-md group"
             >
-              <Banknote size={18} />
-              تحصيل ودفع
+              <Banknote size={16} className="group-hover:scale-110 transition-transform" />
+              <span>تحصيل ودفع</span>
             </button>
             <button
-              onClick={() => handleCheckout(true)}
+              onClick={() => { setShouldPrint(true); setShowCheckoutModal(true); }}
               disabled={cart.length === 0}
-              className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-500 text-white py-3 rounded-2xl font-black flex items-center justify-center gap-2 transition-all text-sm active:scale-95 shadow-md"
+              className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-500 text-white py-3.5 rounded-2xl font-black flex flex-col items-center justify-center gap-0.5 transition-all text-xs active:scale-95 shadow-md group"
             >
-              <Printer size={18} />
-              دفع وطباعة
+              <Printer size={16} className="group-hover:rotate-12 transition-transform" />
+              <span>دفع وطباعة</span>
             </button>
           </div>
-          <button onClick={clearCart} className="w-full text-slate-400 hover:text-red-500 text-[10px] font-bold py-1.5 transition-colors">
+          <button onClick={clearCart} className="w-full text-slate-400 hover:text-red-500 text-[10px] font-bold py-2 transition-colors">
             إلغاء الطلب والتفريغ
           </button>
         </div>
       </div>
+      {/* Checkout Payment Modal */}
+      {showCheckoutModal && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-800 rounded-[32px] shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200 border border-white/20">
+            <div className="p-6 border-b border-gray-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
+              <div className="flex items-center gap-3">
+                <div className="bg-indigo-600 p-2.5 rounded-2xl text-white shadow-lg shadow-indigo-200">
+                  <Banknote size={24} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-slate-800 dark:text-white">توزيع مبالغ الدفع</h3>
+                  <p className="text-xs text-slate-400 font-bold">يرجى تحديد كيفية تحصيل مبلغ الفاتورة</p>
+                </div>
+              </div>
+              <button onClick={() => setShowCheckoutModal(false)} className="p-2 hover:bg-red-50 hover:text-red-500 rounded-xl transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-8 space-y-6">
+              {/* Total Amount Card */}
+              <div className="bg-indigo-50 dark:bg-indigo-900/20 p-6 rounded-[24px] border border-indigo-100 dark:border-indigo-800/50 flex justify-between items-center">
+                <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">إجمالي المطلوب سداده</span>
+                <span className="text-4xl font-black text-indigo-600 dark:text-indigo-400 tracking-tighter">
+                  {total.toFixed(2)} <span className="text-sm font-bold opacity-60">{storeSettings.currency}</span>
+                </span>
+              </div>
+
+              {/* Payment Inputs Grid */}
+              <div className="grid grid-cols-2 gap-4">
+                {[
+                  { id: 'cash', label: 'كاش', val: paidCash, set: setPaidCash, icon: <Banknote size={18}/>, color: 'indigo' },
+                  { id: 'visa', label: 'فيزا', val: paidVisa, set: setPaidVisa, icon: <CreditCard size={18}/>, color: 'blue' },
+                  { id: 'wallet', label: 'محفظة', val: paidWallet, set: setPaidWallet, icon: <Smartphone size={18}/>, color: 'emerald' },
+                  { id: 'insta', label: 'انستا', val: paidInstapay, set: setPaidInstapay, icon: <Zap size={18}/>, color: 'orange' }
+                ].map((p) => (
+                  <div key={p.id} className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-1 flex items-center gap-1.5">
+                      {p.icon} {p.label}
+                    </label>
+                    <input 
+                      type="number" dir="ltr" value={p.val} onChange={(e) => p.set(e.target.value)} placeholder="0.00"
+                      className="w-full bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-indigo-500 py-3 px-4 rounded-2xl focus:outline-none transition-all font-black text-lg text-left shadow-inner" 
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {/* Summary Bar */}
+              <div className="bg-slate-100 dark:bg-slate-900 p-4 rounded-2xl flex justify-between items-center">
+                <div className="text-right">
+                  <span className="text-[10px] text-slate-400 block font-bold uppercase">المدفوع حالياً</span>
+                  <span className="text-lg font-black text-slate-700 dark:text-slate-200">
+                    {((parseFloat(paidCash || '0') + parseFloat(paidVisa || '0') + parseFloat(paidWallet || '0') + parseFloat(paidInstapay || '0'))).toFixed(2)}
+                  </span>
+                </div>
+                <div className="h-8 w-px bg-slate-200 dark:bg-slate-700"></div>
+                <div className="text-left">
+                  <span className="text-[10px] text-slate-400 block font-bold uppercase">
+                    {total - (parseFloat(paidCash || '0') + parseFloat(paidVisa || '0') + parseFloat(paidWallet || '0') + parseFloat(paidInstapay || '0')) > 0 ? 'متبقي (آجل)' : 'الباقي'}
+                  </span>
+                  <div className={`text-xl font-black ${total - (parseFloat(paidCash || '0') + parseFloat(paidVisa || '0') + parseFloat(paidWallet || '0') + parseFloat(paidInstapay || '0')) > 0 ? 'text-red-500' : 'text-emerald-600'}`}>
+                    {Math.abs(total - (parseFloat(paidCash || '0') + parseFloat(paidVisa || '0') + parseFloat(paidWallet || '0') + parseFloat(paidInstapay || '0'))).toFixed(2)}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 bg-slate-50 dark:bg-slate-900/50 flex gap-3">
+              <button 
+                onClick={() => setShowCheckoutModal(false)}
+                className="flex-1 py-4 px-6 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-2xl font-black border border-slate-200 dark:border-slate-700 hover:bg-slate-50 transition-all active:scale-95"
+              >
+                تراجع
+              </button>
+              <button 
+                onClick={() => {
+                  handleCheckout(shouldPrint);
+                  setShowCheckoutModal(false);
+                }}
+                className="flex-[2] py-4 px-6 bg-indigo-600 text-white rounded-2xl font-black shadow-lg shadow-indigo-200 dark:shadow-none hover:bg-indigo-700 transition-all active:scale-95 flex items-center justify-center gap-2"
+              >
+                {shouldPrint ? <Printer size={20}/> : <Banknote size={20}/>}
+                تأكيد العملية وإنهاء الفاتورة
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
