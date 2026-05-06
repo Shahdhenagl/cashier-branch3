@@ -30,6 +30,7 @@ export default function POS() {
   const [lastCustomerInfo, setLastCustomerInfo] = useState<any>(null);
   const [lastOrderDetails, setLastOrderDetails] = useState<any>(null);
   const [showCustomerSuggestions, setShowCustomerSuggestions] = useState(false);
+  const [showSplit, setShowSplit] = useState(false);
 
   useEffect(() => {
     if (isDarkMode) {
@@ -822,106 +823,95 @@ export default function POS() {
 
 
         {/* Footer Checkout */}
-        <div className="p-6 bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700 z-10">
-          <div className="space-y-3 mb-4 bg-slate-50 dark:bg-slate-900/50 p-5 rounded-2xl border border-gray-100 dark:border-slate-700">
-            <div className="flex justify-between text-gray-500 dark:text-gray-400 font-semibold text-sm">
-               <span>المجموع الفرعي</span>
-              <span>{subtotal.toFixed(2)} {storeSettings.currency}</span>
+        <div className="p-3 bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700 shadow-2xl">
+          <div className="space-y-2 mb-3">
+            <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 px-1">
+               <span>المجموع: {subtotal.toFixed(2)}</span>
+               <div className="flex items-center gap-1.5">
+                 <span>خصم:</span>
+                 <input type="number" dir="ltr" value={discountStr} onChange={(e) => setDiscountStr(e.target.value)} placeholder="0.00" className="w-12 bg-orange-50 dark:bg-orange-900/20 border-0 p-0 text-[10px] font-black focus:ring-0 text-left rounded" />
+               </div>
             </div>
 
-            {/* Discount Row */}
-            <div className="flex gap-3 items-center pb-1">
-              <label className="text-xs font-bold text-orange-500 whitespace-nowrap flex items-center gap-1">
-                🏷️ خصم
-              </label>
-              <input
-                type="number"
-                dir="ltr"
-                min="0"
-                value={discountStr}
-                onChange={(e) => setDiscountStr(e.target.value)}
-                placeholder="0.00"
-                className="flex-1 bg-white dark:bg-slate-800 border border-orange-200 dark:border-orange-700 py-1.5 px-3 rounded-lg focus:ring-2 focus:ring-orange-400 font-bold text-sm focus:outline-none transition text-left placeholder-gray-300"
-              />
-              {discount > 0 && (
-                <span className="text-orange-500 font-black text-sm whitespace-nowrap">- {discount.toFixed(2)}</span>
-              )}
-            </div>
-            {storeSettings.taxRate > 0 && (
-              <div className="flex justify-between text-gray-500 dark:text-gray-400 font-semibold text-sm pb-4 border-b border-gray-200 dark:border-slate-700">
-                <span>الضريبة ({storeSettings.taxRate}%)</span>
-                <span>{tax.toFixed(2)} {storeSettings.currency}</span>
-              </div>
-            )}
-            <div className="flex justify-between items-end mb-4 pt-4 border-t border-slate-200/50">
-              <span className="text-xs font-bold text-slate-400">الإجمالي النهائي</span>
-              <span className="text-4xl font-black text-indigo-600 dark:text-indigo-400 tracking-tighter">
-                {total.toFixed(2)} <span className="text-sm text-slate-400 font-bold tracking-normal">{storeSettings.currency}</span>
+            <div className="flex justify-between items-center py-2 border-y border-slate-100 dark:border-slate-700/50">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">الإجمالي</span>
+              <span className="text-2xl font-black text-indigo-600 dark:text-indigo-400 tracking-tighter">
+                {total.toFixed(2)} <span className="text-[10px] text-slate-400 font-bold tracking-normal">{storeSettings.currency}</span>
               </span>
             </div>
             
-            <div className="space-y-2.5">
-              <div className="flex items-center justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
-                <span>توزيع المبلغ المدفوع</span>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">
+                <span>طريقة الدفع</span>
+                <button onClick={() => setShowSplit(!showSplit)} className="text-indigo-600 hover:underline">{showSplit ? 'إخفاء التقسيم' : 'تقسيم المبلغ'}</button>
               </div>
               
-              <div className="space-y-2">
-                {[
-                  { label: 'كاش', val: paidCash, set: setPaidCash, icon: <Banknote size={14}/>, color: 'indigo' },
-                  { label: 'فيزا', val: paidVisa, set: setPaidVisa, icon: <CreditCard size={14}/>, color: 'blue' },
-                  { label: 'محفظة', val: paidWallet, set: setPaidWallet, icon: <Smartphone size={14}/>, color: 'emerald' },
-                  { label: 'انستا', val: paidInstapay, set: setPaidInstapay, icon: <Zap size={14}/>, color: 'orange' }
-                ].map((p, idx) => (
-                  <div key={idx} className="flex items-center gap-3 bg-white dark:bg-slate-800 p-1.5 pr-3 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm focus-within:border-indigo-300 transition-colors group">
-                    <span className="text-slate-400 group-focus-within:text-indigo-500">{p.icon}</span>
-                    <span className="text-xs font-bold text-slate-500 min-w-[45px]">{p.label}</span>
-                    <input 
-                      type="number" dir="ltr" value={p.val} onChange={(e) => p.set(e.target.value)} placeholder="0.00"
-                      className="flex-1 bg-transparent border-0 py-1.5 px-0 text-sm font-black focus:ring-0 text-left" 
-                    />
-                  </div>
-                ))}
+              <div className={showSplit ? 'grid grid-cols-2 gap-2' : 'block'}>
+                <div className="relative group">
+                  <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500"><Banknote size={12}/></span>
+                  <input 
+                    type="number" dir="ltr" value={paidCash} onChange={(e) => setPaidCash(e.target.value)} placeholder="كاش"
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-transparent focus:border-indigo-300 py-2 pr-8 pl-2 rounded-xl focus:outline-none transition-all font-black text-xs text-left shadow-inner" 
+                  />
+                </div>
+                {showSplit && (
+                  <>
+                    <div className="relative group">
+                      <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-500"><CreditCard size={12}/></span>
+                      <input 
+                        type="number" dir="ltr" value={paidVisa} onChange={(e) => setPaidVisa(e.target.value)} placeholder="فيزا"
+                        className="w-full bg-slate-50 dark:bg-slate-900 border border-transparent focus:border-blue-300 py-2 pr-8 pl-2 rounded-xl focus:outline-none transition-all font-black text-xs text-left shadow-inner" 
+                      />
+                    </div>
+                    <div className="relative group">
+                      <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-emerald-500"><Smartphone size={12}/></span>
+                      <input 
+                        type="number" dir="ltr" value={paidWallet} onChange={(e) => setPaidWallet(e.target.value)} placeholder="محفظة"
+                        className="w-full bg-slate-50 dark:bg-slate-900 border border-transparent focus:border-emerald-300 py-2 pr-8 pl-2 rounded-xl focus:outline-none transition-all font-black text-xs text-left shadow-inner" 
+                      />
+                    </div>
+                    <div className="relative group">
+                      <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-orange-500"><Zap size={12}/></span>
+                      <input 
+                        type="number" dir="ltr" value={paidInstapay} onChange={(e) => setPaidInstapay(e.target.value)} placeholder="انستا"
+                        className="w-full bg-slate-50 dark:bg-slate-900 border border-transparent focus:border-orange-300 py-2 pr-8 pl-2 rounded-xl focus:outline-none transition-all font-black text-xs text-left shadow-inner" 
+                      />
+                    </div>
+                  </>
+                )}
               </div>
 
-              <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-100/50 dark:bg-slate-900/50 p-3 rounded-2xl">
-                <div className="text-right">
-                  <span className="text-[10px] text-slate-400 block font-bold">المدفوع</span>
-                  <span className="text-sm font-black text-slate-700 dark:text-slate-200">{effectivePaid.toFixed(2)}</span>
-                </div>
-                <div className="text-left">
-                  <span className="text-[10px] text-slate-400 block font-bold">{remaining > 0 ? 'متبقي (آجل)' : 'الباقي'}</span>
-                  <div className={`text-lg font-black ${remaining > 0 ? 'text-red-500' : 'text-emerald-600'}`}>
-                    {Math.abs(remaining).toFixed(2)}
-                  </div>
-                </div>
+              <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-900/50 px-3 py-1.5 rounded-xl text-[10px]">
+                <span className="font-bold text-slate-400">المدفوع: <span className="text-slate-800 dark:text-slate-200">{((parseFloat(paidCash || '0') + parseFloat(paidVisa || '0') + parseFloat(paidWallet || '0') + parseFloat(paidInstapay || '0'))).toFixed(2)}</span></span>
+                <span className={`font-black ${total - (parseFloat(paidCash || '0') + parseFloat(paidVisa || '0') + parseFloat(paidWallet || '0') + parseFloat(paidInstapay || '0')) > 0 ? 'text-red-500' : 'text-emerald-600'}`}>
+                  {total - (parseFloat(paidCash || '0') + parseFloat(paidVisa || '0') + parseFloat(paidWallet || '0') + parseFloat(paidInstapay || '0')) > 0 ? 'متبقي: ' : 'الباقي: '} {Math.abs(total - (parseFloat(paidCash || '0') + parseFloat(paidVisa || '0') + parseFloat(paidWallet || '0') + parseFloat(paidInstapay || '0'))).toFixed(2)}
+                </span>
               </div>
             </div>
           </div>
 
-          <div className="flex flex-col gap-3">
-            <div className="flex gap-2">
-              <button
-                onClick={() => handleCheckoutClick(false)}
-                disabled={cart.length === 0}
-                style={cart.length > 0 ? { background: storeSettings.themeColor } : {}}
-                className="flex-1 disabled:bg-gray-300 dark:disabled:bg-slate-700 disabled:text-gray-500 text-white py-4 rounded-[24px] font-black flex items-center justify-center gap-2 transition-all shadow-lg disabled:shadow-none text-base active:scale-95 group"
-              >
-                <Banknote size={22} className="group-hover:scale-110 transition-transform" />
-                تحصيل ودفع
-              </button>
-              <button
-                onClick={() => handleCheckoutClick(true)}
-                disabled={cart.length === 0}
-                className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 disabled:from-gray-300 disabled:to-gray-400 dark:disabled:from-slate-700 dark:disabled:to-slate-700 disabled:text-gray-500 text-white py-4 rounded-[24px] font-black flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-500/20 disabled:shadow-none text-base active:scale-95 group"
-              >
-                <Printer size={22} className="group-hover:rotate-12 transition-transform" />
-                دفع وطباعة
-              </button>
-            </div>
-            <button onClick={clearCart} disabled={cart.length === 0} className="w-full text-slate-400 hover:text-red-500 text-xs font-bold transition-colors py-2">
-              إلغاء الطلب والتفريغ
+          <div className="flex gap-2">
+            <button
+              onClick={() => handleCheckout(false)}
+              disabled={cart.length === 0}
+              style={cart.length > 0 ? { background: storeSettings.themeColor } : {}}
+              className="flex-1 disabled:bg-gray-300 text-white py-3 rounded-2xl font-black flex items-center justify-center gap-2 transition-all text-sm active:scale-95 shadow-md"
+            >
+              <Banknote size={18} />
+              تحصيل ودفع
+            </button>
+            <button
+              onClick={() => handleCheckout(true)}
+              disabled={cart.length === 0}
+              className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-500 text-white py-3 rounded-2xl font-black flex items-center justify-center gap-2 transition-all text-sm active:scale-95 shadow-md"
+            >
+              <Printer size={18} />
+              دفع وطباعة
             </button>
           </div>
+          <button onClick={clearCart} className="w-full text-slate-400 hover:text-red-500 text-[10px] font-bold py-1.5 transition-colors">
+            إلغاء الطلب والتفريغ
+          </button>
         </div>
       </div>
     </div>
