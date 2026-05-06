@@ -14,7 +14,10 @@ export default function POS() {
   const [customerId, setCustomerId] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerName, setCustomerName] = useState('');
-  const [paidAmountStr, setPaidAmountStr] = useState('');
+  const [paidCash, setPaidCash] = useState('');
+  const [paidVisa, setPaidVisa] = useState('');
+  const [paidWallet, setPaidWallet] = useState('');
+  const [paidInstapay, setPaidInstapay] = useState('');
   const [discountStr, setDiscountStr] = useState('');
   const [customerDebt, setCustomerDebt] = useState<number>(0);
   
@@ -99,7 +102,7 @@ export default function POS() {
 <html dir="rtl" lang="ar">
 <head>
 <meta charset="UTF-8"/>
-<title>فاتورة #${invId}</title>
+<title>فاتورة بيع #${invId}</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
   *{margin:0;padding:0;box-sizing:border-box;font-family:'Cairo', sans-serif;}
@@ -156,7 +159,7 @@ export default function POS() {
         </div>
       </div>
     </div>
-    <div class="invoice-title-badge">فاتورة ضريبية</div>
+    <div class="invoice-title-badge">فاتورة بيع</div>
   </div>
 
   ${customerBlock}
@@ -186,8 +189,12 @@ export default function POS() {
     ` : `
       <div class="payment-status status-paid">✓ تم سداد الفاتورة بالكامل</div>
     `}
-    <div class="payment-method-badge">
-      ${( { cash: '💵 كاش', visa: '💳 فيزا / بطاقة', wallet: '📱 محفظة إلكترونية', instapay: '⚡ انستاباي' } as any)[orderDetails.paymentMethod] || '💵 كاش'}
+    <div style="margin-top:10px; padding:8px; background:#f9fafb; border-radius:8px; border:1px solid #eee;">
+      <div style="font-size:11px; color:#64748b; margin-bottom:4px; border-bottom:1px solid #eee; padding-bottom:2px; text-align:right;">تفاصيل الدفع:</div>
+      ${orderDetails.splitPayments.cash > 0 ? `<div class="summary-row" style="font-size:12px;"><span>💵 كاش:</span><span>${orderDetails.splitPayments.cash.toFixed(2)}</span></div>` : ''}
+      ${orderDetails.splitPayments.visa > 0 ? `<div class="summary-row" style="font-size:12px;"><span>💳 فيزا:</span><span>${orderDetails.splitPayments.visa.toFixed(2)}</span></div>` : ''}
+      ${orderDetails.splitPayments.wallet > 0 ? `<div class="summary-row" style="font-size:12px;"><span>📱 محفظة:</span><span>${orderDetails.splitPayments.wallet.toFixed(2)}</span></div>` : ''}
+      ${orderDetails.splitPayments.instapay > 0 ? `<div class="summary-row" style="font-size:12px;"><span>⚡ انستا باي:</span><span>${orderDetails.splitPayments.instapay.toFixed(2)}</span></div>` : ''}
     </div>
   </div>
 
@@ -206,11 +213,10 @@ export default function POS() {
   // Opens payment method modal before checkout
   const handleCheckoutClick = (shouldPrint: boolean) => {
     if (cart.length === 0) return;
-    setPendingShouldPrint(shouldPrint);
-    setShowPaymentModal(true);
+    doCheckout(shouldPrint);
   };
 
-  const doCheckout = async (shouldPrint: boolean, method: typeof paymentMethod) => {
+  const doCheckout = async (shouldPrint: boolean) => {
     const currentCart = [...cart];
     const currentSubtotal = subtotal;
     const currentDiscount = discount;
@@ -220,9 +226,22 @@ export default function POS() {
     const currentCustomerPhone = customerPhone;
     const currentCustomId = customerId;
 
-    const finalPaidAmount = paidAmountStr === '' ? currentTotal : parseFloat(paidAmountStr) || 0;
+    const splitPayments = {
+      cash: parseFloat(paidCash) || 0,
+      visa: parseFloat(paidVisa) || 0,
+      wallet: parseFloat(paidWallet) || 0,
+      instapay: parseFloat(paidInstapay) || 0
+    };
 
-    if (finalPaidAmount < currentTotal && (!currentCustomerName.trim() || !currentCustomerPhone.trim())) {
+    const finalPaidAmount = splitPayments.cash + splitPayments.visa + splitPayments.wallet + splitPayments.instapay;
+    
+    // If all fields are empty, assume full payment in cash
+    const isAllEmpty = !paidCash && !paidVisa && !paidWallet && !paidInstapay;
+    const effectivePaidAmount = isAllEmpty ? currentTotal : finalPaidAmount;
+    const effectiveSplit = isAllEmpty ? { ...splitPayments, cash: currentTotal } : splitPayments;
+    const primaryMethod = effectiveSplit.cash >= effectiveSplit.visa ? 'cash' : 'visa';
+
+    if (effectivePaidAmount < currentTotal && (!currentCustomerName.trim() || !currentCustomerPhone.trim())) {
       alert("عذراً، يجب تسجيل اسم ورقم هاتف العميل بالكامل (الاسم والموبايل) في حالة البيع بالآجل لحفظ المديونية.");
       return;
     }
@@ -235,11 +254,12 @@ export default function POS() {
       discount: currentDiscount,
       tax: currentTax,
       total: currentTotal,
-      paidAmount: finalPaidAmount,
+      paidAmount: effectivePaidAmount,
+      splitPayments: effectiveSplit,
       customerName: currentCustomerName,
       customerPhone: currentCustomerPhone,
       customId: currentCustomId,
-      paymentMethod: method,
+      paymentMethod: primaryMethod,
     };
     
     const actualCustomer = useStore.getState().customers.find(c => (currentCustomerPhone && c.phone === currentCustomerPhone) || (currentCustomId && c.custom_id === currentCustomId));
@@ -258,9 +278,11 @@ export default function POS() {
     setCustomerName('');
     setCustomerPhone('');
     setCustomerId('');
-    setPaidAmountStr('');
+    setPaidCash('');
+    setPaidVisa('');
+    setPaidWallet('');
+    setPaidInstapay('');
     setDiscountStr('');
-    setPaymentMethod('cash');
     setCustomerDebt(0);
     setShowCustomerSuggestions(false);
   };
@@ -299,8 +321,10 @@ export default function POS() {
   const tax = discountedSubtotal * (storeSettings.taxRate / 100);
   const total = discountedSubtotal + tax;
 
-  const currentPaid = paidAmountStr === '' ? total : parseFloat(paidAmountStr) || 0;
-  const remaining = total - currentPaid;
+  const currentPaid = (parseFloat(paidCash) || 0) + (parseFloat(paidVisa) || 0) + (parseFloat(paidWallet) || 0) + (parseFloat(paidInstapay) || 0);
+  const isAnyPaid = paidCash || paidVisa || paidWallet || paidInstapay;
+  const effectivePaid = isAnyPaid ? currentPaid : total;
+  const remaining = total - effectivePaid;
 
   // Sync customer debt calculation only
   useEffect(() => {
@@ -352,58 +376,6 @@ export default function POS() {
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-slate-900 transition-colors duration-300 overflow-hidden font-sans text-gray-900 dark:text-gray-100">
       
-      {/* PAYMENT METHOD MODAL */}
-      {showPaymentModal && (
-        <div className="fixed inset-0 z-[150] bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-[32px] shadow-2xl w-full max-w-sm overflow-hidden border border-gray-200 dark:border-slate-700">
-            <div className="p-6 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between">
-              <h3 className="text-xl font-black text-gray-900 dark:text-white">اختر طريقة الدفع</h3>
-              <button onClick={() => setShowPaymentModal(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition">
-                <X size={20} className="text-gray-500" />
-              </button>
-            </div>
-            <div className="p-5 grid grid-cols-2 gap-3">
-              {([
-                { id: 'cash',     label: 'كاش',                icon: '💵', color: 'emerald' },
-                { id: 'visa',     label: 'فيزا / بطاقة',       icon: '💳', color: 'blue' },
-                { id: 'wallet',   label: 'محفظة إلكترونية',    icon: '📱', color: 'purple' },
-                { id: 'instapay', label: 'انستاباي',            icon: '⚡', color: 'amber' },
-              ] as const).map(m => (
-                <button
-                  key={m.id}
-                  onClick={() => setPaymentMethod(m.id)}
-                  className={`flex flex-col items-center justify-center gap-2 p-5 rounded-2xl border-2 font-bold transition-all ${
-                    paymentMethod === m.id
-                      ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 scale-105 shadow-lg'
-                      : 'border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-600 dark:text-gray-300 hover:border-indigo-300 hover:bg-indigo-50/50'
-                  }`}
-                >
-                  <span className="text-3xl">{m.icon}</span>
-                  <span className="text-sm text-center leading-tight">{m.label}</span>
-                  {paymentMethod === m.id && <span className="text-xs font-black text-indigo-500">✓ محدد</span>}
-                </button>
-              ))}
-            </div>
-            <div className="p-5 pt-2 flex gap-3">
-              <button
-                onClick={() => setShowPaymentModal(false)}
-                className="flex-1 border-2 border-gray-200 dark:border-slate-600 text-gray-500 dark:text-gray-400 py-3.5 rounded-2xl font-bold hover:bg-gray-50 dark:hover:bg-slate-700 transition"
-              >
-                إلغاء
-              </button>
-              <button
-                onClick={() => {
-                  setShowPaymentModal(false);
-                  doCheckout(pendingShouldPrint, paymentMethod);
-                }}
-                className="flex-2 flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white py-3.5 rounded-2xl font-black transition shadow-lg flex items-center justify-center gap-2"
-              >
-                <Banknote size={20} /> تأكيد الدفع
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* SUCCESS MODAL */}
       {showSuccessModal && (
@@ -874,22 +846,45 @@ export default function POS() {
               </span>
             </div>
             
-            <div className="flex gap-4 items-center justify-between pt-2">
-              <div className="flex-1">
-                <label className="text-xs text-slate-500 mb-1 block font-bold">المدفوع</label>
-                <input 
-                  type="number"
-                  dir="ltr"
-                  value={paidAmountStr}
-                  onChange={(e) => setPaidAmountStr(e.target.value)}
-                  placeholder={total.toFixed(2)}
-                  className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 py-2 px-3 rounded-lg focus:ring-2 focus:ring-indigo-500 font-bold text-lg focus:outline-none transition text-left" 
-                />
+            <div className="pt-2">
+              <label className="text-xs text-slate-500 mb-2 block font-bold">تفاصيل الدفع (كاش / فيزا / محفظة / انستا)</label>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="relative">
+                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">كاش</span>
+                  <input 
+                    type="number" dir="ltr" value={paidCash} onChange={(e) => setPaidCash(e.target.value)}
+                    className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 py-2 pr-8 pl-2 rounded-lg focus:ring-1 focus:ring-indigo-500 font-bold text-sm focus:outline-none transition text-left" 
+                  />
+                </div>
+                <div className="relative">
+                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">فيزا</span>
+                  <input 
+                    type="number" dir="ltr" value={paidVisa} onChange={(e) => setPaidVisa(e.target.value)}
+                    className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 py-2 pr-8 pl-2 rounded-lg focus:ring-1 focus:ring-indigo-500 font-bold text-sm focus:outline-none transition text-left" 
+                  />
+                </div>
+                <div className="relative">
+                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">محفظة</span>
+                  <input 
+                    type="number" dir="ltr" value={paidWallet} onChange={(e) => setPaidWallet(e.target.value)}
+                    className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 py-2 pr-10 pl-2 rounded-lg focus:ring-1 focus:ring-indigo-500 font-bold text-sm focus:outline-none transition text-left" 
+                  />
+                </div>
+                <div className="relative">
+                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">انستا</span>
+                  <input 
+                    type="number" dir="ltr" value={paidInstapay} onChange={(e) => setPaidInstapay(e.target.value)}
+                    className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 py-2 pr-8 pl-2 rounded-lg focus:ring-1 focus:ring-indigo-500 font-bold text-sm focus:outline-none transition text-left" 
+                  />
+                </div>
               </div>
-              <div className="flex-1 text-left">
-                <label className="text-xs text-slate-500 mb-1 block font-bold text-left">{remaining > 0 ? 'متبقي للعميل (آجل)' : 'الباقي للعميل'}</label>
-                <div className={`text-xl font-bold ${remaining > 0 ? 'text-red-500' : 'text-green-600 dark:text-green-400'}`}>
-                  {Math.abs(remaining).toFixed(2)} <span className="text-sm font-normal">{storeSettings.currency}</span>
+              <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 flex justify-between items-center">
+                <span className="text-xs font-bold text-slate-500">إجمالي المدفوع: {effectivePaid.toFixed(2)}</span>
+                <div className="text-right">
+                  <span className="text-[10px] text-slate-500 block font-bold">{remaining > 0 ? 'متبقي (آجل)' : 'الباقي'}</span>
+                  <div className={`text-lg font-black ${remaining > 0 ? 'text-red-500' : 'text-emerald-600'}`}>
+                    {Math.abs(remaining).toFixed(2)} <span className="text-xs font-normal">{storeSettings.currency}</span>
+                  </div>
                 </div>
               </div>
             </div>

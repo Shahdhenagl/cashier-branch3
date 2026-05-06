@@ -21,8 +21,11 @@ export default function Finance() {
   const [formData, setFormData] = useState({ 
     category: 'عام', 
     amount: '', 
-    note: '', 
-    payment_method: 'cash' as 'cash' | 'visa' | 'wallet' | 'instapay' 
+    paid_cash: '', 
+    paid_visa: '', 
+    paid_wallet: '', 
+    paid_instapay: '', 
+    note: '' 
   });
 
   // --- Calculations ---
@@ -142,39 +145,51 @@ export default function Finance() {
       setFormData({ 
         category: expense.category, 
         amount: expense.amount.toString(), 
-        note: expense.note,
-        payment_method: expense.payment_method || 'cash'
+        paid_cash: expense.paid_cash?.toString() || '',
+        paid_visa: expense.paid_visa?.toString() || '',
+        paid_wallet: expense.paid_wallet?.toString() || '',
+        paid_instapay: expense.paid_instapay?.toString() || '',
+        note: expense.note 
       });
     } else {
       setEditingExpense(null);
       setFormData({ 
         category: 'عام', 
         amount: '', 
-        note: '',
-        payment_method: 'cash'
+        paid_cash: '', 
+        paid_visa: '', 
+        paid_wallet: '', 
+        paid_instapay: '', 
+        note: '' 
       });
     }
     setShowModal(true);
   };
 
   const handleSubmit = async () => {
-    const amountNum = parseFloat(formData.amount);
-    if (!amountNum || amountNum <= 0) return;
+    const cash = parseFloat(formData.paid_cash) || 0;
+    const visa = parseFloat(formData.paid_visa) || 0;
+    const wallet = parseFloat(formData.paid_wallet) || 0;
+    const insta = parseFloat(formData.paid_instapay) || 0;
+    
+    const amountNum = cash + visa + wallet + insta;
+    if (amountNum <= 0) return alert('يرجى إدخال مبالغ الدفع أولاً');
+
+    const expenseData = {
+      category: formData.category,
+      amount: amountNum,
+      paid_cash: cash,
+      paid_visa: visa,
+      paid_wallet: wallet,
+      paid_instapay: insta,
+      note: formData.note,
+      payment_method: cash >= visa ? 'cash' : 'visa'
+    };
 
     if (editingExpense) {
-      await updateExpense(editingExpense.id, {
-        category: formData.category,
-        amount: amountNum,
-        note: formData.note,
-        payment_method: formData.payment_method
-      });
+      await updateExpense(editingExpense.id, expenseData as any);
     } else {
-      await addExpense({
-        category: formData.category,
-        amount: amountNum,
-        note: formData.note,
-        payment_method: formData.payment_method
-      });
+      await addExpense(expenseData as any);
     }
     setShowModal(false);
   };
@@ -446,52 +461,70 @@ export default function Finance() {
               </button>
             </div>
             <div className="p-8 space-y-6">
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">الفئة</label>
+                <select 
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 focus:ring-2 focus:ring-indigo-500/20 outline-none font-bold"
+                  value={formData.category}
+                  onChange={e => setFormData({...formData, category: e.target.value})}
+                >
+                  <option value="عام">عام</option>
+                  <option value="إيجار">إيجار</option>
+                  <option value="كهرباء/مياه">كهرباء / مياه</option>
+                  <option value="رواتب">رواتب</option>
+                  <option value="نقل/توصيل">نقل / توصيل</option>
+                  <option value="صيانة">صيانة</option>
+                </select>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">الفئة</label>
-                  <select 
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 focus:ring-2 focus:ring-indigo-500/20 outline-none font-bold"
-                    value={formData.category}
-                    onChange={e => setFormData({...formData, category: e.target.value})}
-                  >
-                    <option value="عام">عام</option>
-                    <option value="إيجار">إيجار</option>
-                    <option value="كهرباء/مياه">كهرباء / مياه</option>
-                    <option value="رواتب">رواتب</option>
-                    <option value="نقل/توصيل">نقل / توصيل</option>
-                    <option value="صيانة">صيانة</option>
-                  </select>
+                  <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wide text-right">كاش</label>
+                  <input 
+                    type="number" dir="ltr" placeholder="0.00"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:ring-1 focus:outline-none font-bold text-right"
+                    value={formData.paid_cash}
+                    onChange={e => setFormData({...formData, paid_cash: e.target.value})}
+                  />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">طريقة الدفع</label>
-                  <select 
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 focus:ring-2 focus:ring-indigo-500/20 outline-none font-bold text-indigo-600"
-                    value={formData.payment_method}
-                    onChange={e => setFormData({...formData, payment_method: e.target.value as any})}
-                  >
-                    <option value="cash">💵 كاش</option>
-                    <option value="visa">💳 فيزا</option>
-                    <option value="wallet">📱 محفظة</option>
-                    <option value="instapay">⚡ انستاباي</option>
-                  </select>
+                  <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wide text-right">فيزا</label>
+                  <input 
+                    type="number" dir="ltr" placeholder="0.00"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:ring-1 focus:outline-none font-bold text-right"
+                    value={formData.paid_visa}
+                    onChange={e => setFormData({...formData, paid_visa: e.target.value})}
+                  />
                 </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wide text-right">محفظة</label>
+                  <input 
+                    type="number" dir="ltr" placeholder="0.00"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:ring-1 focus:outline-none font-bold text-right"
+                    value={formData.paid_wallet}
+                    onChange={e => setFormData({...formData, paid_wallet: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wide text-right">انستا باي</label>
+                  <input 
+                    type="number" dir="ltr" placeholder="0.00"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:ring-1 focus:outline-none font-bold text-right"
+                    value={formData.paid_instapay}
+                    onChange={e => setFormData({...formData, paid_instapay: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 flex justify-between items-center">
+                <span className="text-sm font-bold text-slate-500">إجمالي المبلغ:</span>
+                <span className="text-2xl font-black text-red-600">
+                  {((parseFloat(formData.paid_cash) || 0) + (parseFloat(formData.paid_visa) || 0) + (parseFloat(formData.paid_wallet) || 0) + (parseFloat(formData.paid_instapay) || 0)).toLocaleString()} {storeSettings.currency}
+                </span>
               </div>
               
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">المبلغ</label>
-                <div className="relative">
-                  <input 
-                    type="number" 
-                    placeholder="0.00"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 pr-12 focus:ring-2 focus:ring-indigo-500/20 outline-none font-black text-2xl text-red-600"
-                    value={formData.amount}
-                    onChange={e => setFormData({...formData, amount: e.target.value})}
-                  />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">{storeSettings.currency}</span>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">ملاحظات</label>
+                <label className="block text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">ملاحظات</label>
                 <textarea 
                   placeholder="اكتب ملاحظاتك هنا..."
                   className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 h-24 focus:ring-2 focus:ring-indigo-500/20 outline-none font-medium resize-none"

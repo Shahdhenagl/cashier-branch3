@@ -55,7 +55,7 @@ export default function Invoices() {
 <html dir="rtl" lang="ar">
 <head>
   <meta charset="UTF-8"/>
-  <title>${isPayment ? 'وصل سداد' : 'فاتورة'} #${order.id}</title>
+  <title>فاتورة بيع #${order.id}</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
     *{margin:0;padding:0;box-sizing:border-box;font-family:'Cairo', sans-serif;}
@@ -129,24 +129,25 @@ export default function Invoices() {
 
     <div class="summary-section">
       ${isPayment ? `
-        <div class="summary-row total">
-          <span>إجمالي السداد:</span>
-          <span>${order.paid_amount.toFixed(2)} ${storeSettings.currency}</span>
+      <div class="summary-row"><span>المجموع الفرعي:</span><span>${subtotal.toFixed(2)} ${storeSettings.currency}</span></div>
+      <div class="summary-row"><span>الضريبة (${storeSettings.taxRate}%):</span><span>${taxValue.toFixed(2)} ${storeSettings.currency}</span></div>
+      <div class="summary-row total"><span>الإجمالي النهائي:</span><span>${order.total.toFixed(2)} ${storeSettings.currency}</span></div>
+      <div class="summary-row" style="margin-top:4px;color:#059669;font-weight:bold;"><span>المبلغ المدفوع:</span><span>${order.paid_amount.toFixed(2)} ${storeSettings.currency}</span></div>
+      
+      <div style="margin-top:10px; padding:8px; background:#f9fafb; border-radius:8px; border:1px solid #eee;">
+        <div style="font-size:11px; color:#64748b; margin-bottom:4px; border-bottom:1px solid #eee; padding-bottom:2px; text-align:right;">تفاصيل الدفع:</div>
+        ${order.paid_cash > 0 ? `<div class="summary-row" style="font-size:11px;"><span>💵 كاش:</span><span>${order.paid_cash.toFixed(2)}</span></div>` : ''}
+        ${order.paid_visa > 0 ? `<div class="summary-row" style="font-size:11px;"><span>💳 فيزا:</span><span>${order.paid_visa.toFixed(2)}</span></div>` : ''}
+        ${order.paid_wallet > 0 ? `<div class="summary-row" style="font-size:11px;"><span>📱 محفظة:</span><span>${order.paid_wallet.toFixed(2)}</span></div>` : ''}
+        ${order.paid_instapay > 0 ? `<div class="summary-row" style="font-size:11px;"><span>⚡ انستا باي:</span><span>${order.paid_instapay.toFixed(2)}</span></div>` : ''}
+      </div>
+
+      ${order.paid_amount < order.total ? `
+        <div class="payment-status status-debt" style="margin-top:10px;">
+          <div>متبقي للتحصيل (آجل): ${(order.total - order.paid_amount).toFixed(2)} ${storeSettings.currency}</div>
         </div>
       ` : `
-        <div class="summary-row"><span>المجموع الفرعي:</span><span>${subtotal.toFixed(2)} ${storeSettings.currency}</span></div>
-        ${discountValue > 0 ? `<div class="summary-row" style="color:#e53e3e;font-weight:700;"><span>🏷️ الخصم:</span><span>- ${discountValue.toFixed(2)} ${storeSettings.currency}</span></div>` : ''}
-        <div class="summary-row"><span>الضريبة (${storeSettings.taxRate}%):</span><span>${taxValue.toFixed(2)} ${storeSettings.currency}</span></div>
-        <div class="summary-row total"><span>الإجمالي النهائي:</span><span>${order.total.toFixed(2)} ${storeSettings.currency}</span></div>
-        
-        ${(order.total - order.paid_amount > 0) ? `
-          <div class="payment-status status-debt">
-            <div>متبقي للتحصيل (آجل): ${(order.total - order.paid_amount).toFixed(2)} ${storeSettings.currency}</div>
-            <div style="font-size:11px;opacity:0.8;margin-top:2px;">تم سداد: ${order.paid_amount.toFixed(2)} ${storeSettings.currency}</div>
-          </div>
-        ` : `
-          <div class="payment-status status-paid">✓ تم سداد الفاتورة بالكامل</div>
-        `}
+        <div class="payment-status status-paid" style="margin-top:10px;">✓ تم سداد الفاتورة بالكامل</div>
       `}
     </div>
 
@@ -171,20 +172,20 @@ export default function Invoices() {
       ['تقرير الفواتير', '', '', '', '', '', '', ''],
       ['التاريخ', new Date().toLocaleDateString(), '', '', '', '', '', ''],
       [''],
-      ['رقم الفاتورة', 'العميل', 'التاريخ', 'الإجمالي', 'المرتجع', 'المدفوع', 'الباقي', 'النوع'],
-      ...filteredOrders.map(o => {
-        const returnedValue = o.items.reduce((sum, i) => sum + (i.returned_quantity * i.sale_price), 0);
-        return [
-          o.id,
-          o.customer?.name || 'عميل نقدي',
-          new Date(o.date).toLocaleString('ar-SA'),
-          o.total,
-          returnedValue,
-          o.paid_amount,
-          o.type === 'payment' ? 0 : Math.max(0, (o.total - returnedValue) - o.paid_amount),
-          o.type === 'payment' ? 'سداد' : 'بيع'
-        ];
-      })
+      ['رقم الفاتورة', 'العميل', 'التاريخ', 'الإجمالي', 'المدفوع', 'كاش', 'فيزا', 'محفظة', 'انستا', 'الباقي', 'النوع'],
+      ...filteredOrders.map(o => [
+        o.id,
+        o.customer?.name || 'عميل نقدي',
+        new Date(o.date).toLocaleString('ar-SA'),
+        o.total,
+        o.paid_amount,
+        o.paid_cash,
+        o.paid_visa,
+        o.paid_wallet,
+        o.paid_instapay,
+        o.type === 'payment' ? 0 : Math.max(0, o.total - o.paid_amount),
+        o.type === 'payment' ? 'سداد' : 'بيع'
+      ])
     ];
     const ws = XLSX.utils.aoa_to_sheet(wsData);
     const wb = XLSX.utils.book_new();
@@ -226,8 +227,8 @@ export default function Invoices() {
     <div className="p-8">
       <div className="flex justify-between items-end mb-8">
         <div>
-          <h1 className="text-3xl font-black text-slate-800">الفواتير والمرتجعات</h1>
-          <p className="text-slate-500 mt-2">مراجعة الفواتير وعمليات الاسترجاع مع الفلاتر المتقدمة</p>
+          <h1 className="text-3xl font-black text-slate-800">فواتير البيع والمرتجعات</h1>
+          <p className="text-slate-500 mt-2">مراجعة فواتير البيع وعمليات الاسترجاع مع الفلاتر المتقدمة</p>
         </div>
         <div className="flex gap-2">
           <button 

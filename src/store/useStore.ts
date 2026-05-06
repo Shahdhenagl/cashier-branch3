@@ -52,6 +52,10 @@ export interface PurchaseInvoice {
   supplier_id: string;
   total: number;
   paid_amount: number;
+  paid_cash: number;
+  paid_visa: number;
+  paid_wallet: number;
+  paid_instapay: number;
   payment_method: 'cash' | 'visa' | 'wallet' | 'instapay';
   created_at: string;
   items?: PurchaseItem[];
@@ -62,6 +66,10 @@ export interface Order {
   items: OrderItem[];
   total: number;
   paid_amount: number;
+  paid_cash: number;
+  paid_visa: number;
+  paid_wallet: number;
+  paid_instapay: number;
   type: 'sale' | 'payment';
   date: string;
   payment_method: 'cash' | 'visa' | 'wallet' | 'instapay';
@@ -72,6 +80,10 @@ export interface Expense {
   id: string;
   category: string;
   amount: number;
+  paid_cash: number;
+  paid_visa: number;
+  paid_wallet: number;
+  paid_instapay: number;
   note: string;
   payment_method: 'cash' | 'visa' | 'wallet' | 'instapay';
   date: string;
@@ -118,7 +130,14 @@ interface CashierStore {
   clearCart: () => void;
 
   // Operations
-  checkout: (total: number, customerDetails?: { name: string; phone: string; custom_id?: string }, paidAmount?: number, type?: 'sale' | 'payment', paymentMethod?: string) => Promise<string>;
+  checkout: (
+    total: number, 
+    customerDetails?: { name: string; phone: string; custom_id?: string }, 
+    paidAmount?: number, 
+    type?: 'sale' | 'payment', 
+    paymentMethod?: string,
+    splitPayments?: { cash: number; visa: number; wallet: number; instapay: number }
+  ) => Promise<string>;
   processReturn: (orderId: string, productId: string, returnQty: number) => Promise<boolean>;
 
   // Admin
@@ -143,7 +162,11 @@ interface CashierStore {
 
   // Purchases
   loadPurchaseInvoices: () => Promise<void>;
-  addPurchaseInvoice: (invoice: Omit<PurchaseInvoice, 'id' | 'created_at' | 'items'>, items: PurchaseItem[]) => Promise<void>;
+  addPurchaseInvoice: (
+    invoice: Omit<PurchaseInvoice, 'id' | 'created_at' | 'items' | 'paid_cash' | 'paid_visa' | 'paid_wallet' | 'paid_instapay'>, 
+    items: PurchaseItem[],
+    splitPayments?: { cash: number; visa: number; wallet: number; instapay: number }
+  ) => Promise<void>;
   paySupplierDebt: (supplierId: string, amount: number) => Promise<void>;
 
   // Auth
@@ -260,6 +283,10 @@ export const useStore = create<CashierStore>((set, get) => ({
           id: o.id as string,
           total: o.total as number,
           paid_amount: (o.paid_amount as number) ?? (o.total as number),
+          paid_cash: (o.paid_cash as number) ?? 0,
+          paid_visa: (o.paid_visa as number) ?? 0,
+          paid_wallet: (o.paid_wallet as number) ?? 0,
+          paid_instapay: (o.paid_instapay as number) ?? 0,
           type: (o.type as string) as 'sale' | 'payment' ?? 'sale',
           payment_method: (o.payment_method as any) ?? 'cash',
           date: o.created_at as string,
@@ -296,6 +323,10 @@ export const useStore = create<CashierStore>((set, get) => ({
               id: e.id,
               category: e.category,
               amount: e.amount,
+              paid_cash: e.paid_cash || 0,
+              paid_visa: e.paid_visa || 0,
+              paid_wallet: e.paid_wallet || 0,
+              paid_instapay: e.paid_instapay || 0,
               note: e.note,
               payment_method: e.payment_method ?? 'cash',
               date: e.created_at
@@ -373,7 +404,7 @@ export const useStore = create<CashierStore>((set, get) => ({
   clearCart: () => set({ cart: [] }),
 
   // ── Checkout ───────────────────────────────────────────────
-  checkout: async (total, customerDetails?: { name: string; phone: string; custom_id?: string }, paidAmount = total, type = 'sale', paymentMethod = 'cash') => {
+  checkout: async (total, customerDetails, paidAmount = total, type = 'sale', paymentMethod = 'cash', splitPayments) => {
     const state = get();
     if (state.cart.length === 0 && type !== 'payment') return state.activeInvoiceId;
 
@@ -429,6 +460,10 @@ export const useStore = create<CashierStore>((set, get) => ({
       id: invoiceId, 
       total, 
       paid_amount: savedPaidAmount,
+      paid_cash: splitPayments?.cash || (paymentMethod === 'cash' ? savedPaidAmount : 0),
+      paid_visa: splitPayments?.visa || (paymentMethod === 'visa' ? savedPaidAmount : 0),
+      paid_wallet: splitPayments?.wallet || (paymentMethod === 'wallet' ? savedPaidAmount : 0),
+      paid_instapay: splitPayments?.instapay || (paymentMethod === 'instapay' ? savedPaidAmount : 0),
       type,
       customer_id: customerId,
       payment_method: paymentMethod
@@ -472,6 +507,10 @@ export const useStore = create<CashierStore>((set, get) => ({
       items: state.cart.map((i) => ({ ...i })),
       total,
       paid_amount: savedPaidAmount,
+      paid_cash: splitPayments?.cash || (paymentMethod === 'cash' ? savedPaidAmount : 0),
+      paid_visa: splitPayments?.visa || (paymentMethod === 'visa' ? savedPaidAmount : 0),
+      paid_wallet: splitPayments?.wallet || (paymentMethod === 'wallet' ? savedPaidAmount : 0),
+      paid_instapay: splitPayments?.instapay || (paymentMethod === 'instapay' ? savedPaidAmount : 0),
       type,
       payment_method: paymentMethod as any,
       date: new Date().toISOString(),
@@ -591,6 +630,10 @@ export const useStore = create<CashierStore>((set, get) => ({
         id: o.id as string,
         total: o.total as number,
         paid_amount: (o.paid_amount as number) ?? (o.total as number),
+        paid_cash: (o.paid_cash as number) ?? 0,
+        paid_visa: (o.paid_visa as number) ?? 0,
+        paid_wallet: (o.paid_wallet as number) ?? 0,
+        paid_instapay: (o.paid_instapay as number) ?? 0,
         type: (o.type as string) as 'sale' | 'payment' ?? 'sale',
         payment_method: (o.payment_method as any) ?? 'cash',
         date: o.created_at as string,
@@ -649,6 +692,10 @@ export const useStore = create<CashierStore>((set, get) => ({
     const { data, error } = await supabase.from('expenses').insert({
       category: expense.category,
       amount: expense.amount,
+      paid_cash: expense.paid_cash || 0,
+      paid_visa: expense.paid_visa || 0,
+      paid_wallet: expense.paid_wallet || 0,
+      paid_instapay: expense.paid_instapay || 0,
       note: expense.note,
       payment_method: expense.payment_method
     }).select().single();
@@ -663,6 +710,10 @@ export const useStore = create<CashierStore>((set, get) => ({
         id: (data as any).id,
         category: (data as any).category,
         amount: (data as any).amount,
+        paid_cash: (data as any).paid_cash || 0,
+        paid_visa: (data as any).paid_visa || 0,
+        paid_wallet: (data as any).paid_wallet || 0,
+        paid_instapay: (data as any).paid_instapay || 0,
         note: (data as any).note,
         payment_method: (data as any).payment_method,
         date: (data as any).created_at
@@ -675,6 +726,10 @@ export const useStore = create<CashierStore>((set, get) => ({
     const { data, error } = await supabase.from('expenses').update({
       category: expense.category,
       amount: expense.amount,
+      paid_cash: expense.paid_cash,
+      paid_visa: expense.paid_visa,
+      paid_wallet: expense.paid_wallet,
+      paid_instapay: expense.paid_instapay,
       note: expense.note,
       payment_method: expense.payment_method
     }).eq('id', id).select().single();
@@ -731,6 +786,10 @@ export const useStore = create<CashierStore>((set, get) => ({
       if (data) {
         const mapped = (data as any[]).map(inv => ({
           ...inv,
+          paid_cash: inv.paid_cash || 0,
+          paid_visa: inv.paid_visa || 0,
+          paid_wallet: inv.paid_wallet || 0,
+          paid_instapay: inv.paid_instapay || 0,
           items: inv.purchase_items || []
         }));
         set({ purchaseInvoices: mapped as PurchaseInvoice[] });
@@ -740,7 +799,7 @@ export const useStore = create<CashierStore>((set, get) => ({
     }
   },
 
-  addPurchaseInvoice: async (invoice, items) => {
+  addPurchaseInvoice: async (invoice, items, splitPayments) => {
     const state = get();
     // 1. Insert Invoice
     const { data: invData, error: invError } = await supabase
@@ -750,6 +809,10 @@ export const useStore = create<CashierStore>((set, get) => ({
         supplier_id: invoice.supplier_id,
         total: invoice.total,
         paid_amount: invoice.paid_amount,
+        paid_cash: splitPayments?.cash || 0,
+        paid_visa: splitPayments?.visa || 0,
+        paid_wallet: splitPayments?.wallet || 0,
+        paid_instapay: splitPayments?.instapay || 0,
         payment_method: invoice.payment_method
       })
       .select()

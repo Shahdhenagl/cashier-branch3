@@ -21,11 +21,13 @@ export default function Suppliers() {
 
   // Invoice form state
   const [invSupplierId, setInvSupplierId] = useState('');
-  const [invPaidAmount, setInvPaidAmount] = useState('');
+  const [invPaidCash, setInvPaidCash] = useState('');
+  const [invPaidVisa, setInvPaidVisa] = useState('');
+  const [invPaidWallet, setInvPaidWallet] = useState('');
+  const [invPaidInstapay, setInvPaidInstapay] = useState('');
   const [invItems, setInvItems] = useState<{ product_id: string; quantity: string; purchase_price: string }[]>([
     { product_id: '', quantity: '1', purchase_price: '' }
   ]);
-  const [invPaymentMethod, setInvPaymentMethod] = useState<'cash' | 'visa' | 'wallet' | 'instapay'>('cash');
 
   // Quick Add Product State
   const [showQuickProductModal, setShowQuickProductModal] = useState(false);
@@ -77,20 +79,32 @@ export default function Suppliers() {
         purchase_price: parseFloat(i.purchase_price),
       }));
 
+      const splitPayments = {
+        cash: parseFloat(invPaidCash) || 0,
+        visa: parseFloat(invPaidVisa) || 0,
+        wallet: parseFloat(invPaidWallet) || 0,
+        instapay: parseFloat(invPaidInstapay) || 0
+      };
+
+      const finalPaidAmount = splitPayments.cash + splitPayments.visa + splitPayments.wallet + splitPayments.instapay;
+      const primaryMethod = splitPayments.cash >= splitPayments.visa ? 'cash' : 'visa';
+
       const invoiceNumber = `PO-${Date.now()}`;
       await addPurchaseInvoice({
         invoice_number: invoiceNumber,
         supplier_id: invSupplierId,
         total: invTotal,
-        paid_amount: parseFloat(invPaidAmount) || 0,
-        payment_method: invPaymentMethod,
-      }, items);
+        paid_amount: finalPaidAmount,
+        payment_method: primaryMethod as any,
+      }, items, splitPayments);
 
       alert('تم حفظ الفاتورة بنجاح وتحديث المخزن');
       setShowInvoiceModal(false);
       setInvSupplierId('');
-      setInvPaidAmount('');
-      setInvPaymentMethod('cash');
+      setInvPaidCash('');
+      setInvPaidVisa('');
+      setInvPaidWallet('');
+      setInvPaidInstapay('');
       setInvItems([{ product_id: '', quantity: '1', purchase_price: '' }]);
       setActiveTab('invoices');
     } catch (error: any) {
@@ -245,8 +259,17 @@ export default function Suppliers() {
   <div class="summary-section">
     <div class="summary-row total"><span>إجمالي الفاتورة:</span><span>${inv.total.toFixed(2)} ${storeSettings.currency}</span></div>
     <div class="summary-row" style="color: #059669; font-weight: bold;"><span>المبلغ المدفوع:</span><span>${inv.paid_amount.toFixed(2)} ${storeSettings.currency}</span></div>
+    
+    <div style="margin-top:10px; padding:8px; background:#f9fafb; border-radius:8px; border:1px solid #eee;">
+      <div style="font-size:11px; color:#64748b; margin-bottom:4px; border-bottom:1px solid #eee; padding-bottom:2px; text-align:right;">تفاصيل الدفع:</div>
+      ${inv.paid_cash > 0 ? `<div class="summary-row" style="font-size:11px;"><span>💵 كاش:</span><span>${inv.paid_cash.toFixed(2)}</span></div>` : ''}
+      ${inv.paid_visa > 0 ? `<div class="summary-row" style="font-size:11px;"><span>💳 فيزا:</span><span>${inv.paid_visa.toFixed(2)}</span></div>` : ''}
+      ${inv.paid_wallet > 0 ? `<div class="summary-row" style="font-size:11px;"><span>📱 محفظة:</span><span>${inv.paid_wallet.toFixed(2)}</span></div>` : ''}
+      ${inv.paid_instapay > 0 ? `<div class="summary-row" style="font-size:11px;"><span>⚡ انستا باي:</span><span>${inv.paid_instapay.toFixed(2)}</span></div>` : ''}
+    </div>
+
     ${inv.total - inv.paid_amount > 0 ? `
-      <div class="summary-row" style="color: #dc2626; font-weight: bold;"><span>المتبقي للمورد:</span><span>${(inv.total - inv.paid_amount).toFixed(2)} ${storeSettings.currency}</span></div>
+      <div class="summary-row" style="color: #dc2626; font-weight: bold; margin-top:10px;"><span>المتبقي للمورد:</span><span>${(inv.total - inv.paid_amount).toFixed(2)} ${storeSettings.currency}</span></div>
     ` : ''}
   </div>
 
@@ -539,17 +562,20 @@ export default function Suppliers() {
                 {/* Paid Amount */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">المبلغ المدفوع للمورد</label>
-                    <input type="number" min="0" step="0.01" placeholder="0.00" value={invPaidAmount} onChange={e => setInvPaidAmount(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition font-medium" />
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wide text-right">كاش</label>
+                    <input type="number" dir="ltr" placeholder="0.00" value={invPaidCash} onChange={e => setInvPaidCash(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition font-bold text-right" />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">طريقة الدفع</label>
-                    <select value={invPaymentMethod} onChange={e => setInvPaymentMethod(e.target.value as any)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition font-bold">
-                      <option value="cash">💵 كاش</option>
-                      <option value="visa">💳 فيزا</option>
-                      <option value="wallet">📱 محفظة</option>
-                      <option value="instapay">⚡ انستاباي</option>
-                    </select>
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wide text-right">فيزا</label>
+                    <input type="number" dir="ltr" placeholder="0.00" value={invPaidVisa} onChange={e => setInvPaidVisa(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition font-bold text-right" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wide text-right">محفظة</label>
+                    <input type="number" dir="ltr" placeholder="0.00" value={invPaidWallet} onChange={e => setInvPaidWallet(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition font-bold text-right" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wide text-right">انستا باي</label>
+                    <input type="number" dir="ltr" placeholder="0.00" value={invPaidInstapay} onChange={e => setInvPaidInstapay(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition font-bold text-right" />
                   </div>
                 </div>
 
@@ -559,11 +585,11 @@ export default function Suppliers() {
                     <span>إجمالي الفاتورة</span><span>{invTotal.toLocaleString()} {storeSettings.currency}</span>
                   </div>
                   <div className="flex justify-between text-sm text-emerald-600 font-bold">
-                    <span>المدفوع</span><span>{parseFloat(invPaidAmount || '0').toLocaleString()}</span>
+                    <span>إجمالي المدفوع</span><span>{((parseFloat(invPaidCash || '0') + parseFloat(invPaidVisa || '0') + parseFloat(invPaidWallet || '0') + parseFloat(invPaidInstapay || '0'))).toLocaleString()}</span>
                   </div>
-                  {invTotal - parseFloat(invPaidAmount || '0') > 0 && (
+                  {invTotal - (parseFloat(invPaidCash || '0') + parseFloat(invPaidVisa || '0') + parseFloat(invPaidWallet || '0') + parseFloat(invPaidInstapay || '0')) > 0 && (
                     <div className="flex justify-between text-sm text-red-500 font-bold">
-                      <span>المتبقي للمورد</span><span>{(invTotal - parseFloat(invPaidAmount || '0')).toLocaleString()}</span>
+                      <span>المتبقي للمورد</span><span>{(invTotal - (parseFloat(invPaidCash || '0') + parseFloat(invPaidVisa || '0') + parseFloat(invPaidWallet || '0') + parseFloat(invPaidInstapay || '0'))).toLocaleString()}</span>
                     </div>
                   )}
                 </div>
