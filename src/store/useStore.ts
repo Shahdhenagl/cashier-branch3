@@ -39,6 +39,15 @@ export interface Supplier {
   created_at: string;
 }
 
+export interface Cashier {
+  id: string;
+  name: string;
+  pin: string;
+  phone: string;
+  photo: string;
+  created_at: string;
+}
+
 export interface PurchaseItem {
   id?: string;
   product_id: string;
@@ -74,6 +83,7 @@ export interface Order {
   date: string;
   payment_method: 'cash' | 'visa' | 'wallet' | 'instapay';
   customer?: Customer;
+  cashier_name?: string;
 }
 
 export interface Expense {
@@ -109,6 +119,7 @@ interface CashierStore {
   categories: Category[];
   customers: Customer[];
   suppliers: Supplier[];
+  cashiers: Cashier[];
   cart: OrderItem[];
   orders: Order[];
   expenses: Expense[];
@@ -117,6 +128,7 @@ interface CashierStore {
   activeInvoiceId: string;
   isLoading: boolean;
   dbError: string | null;
+  activeCashier: Cashier | null;
 
   // Data loading
   loadAll: () => Promise<void>;
@@ -136,7 +148,8 @@ interface CashierStore {
     paidAmount?: number, 
     type?: 'sale' | 'payment', 
     paymentMethod?: string,
-    splitPayments?: { cash: number; visa: number; wallet: number; instapay: number }
+    splitPayments?: { cash: number; visa: number; wallet: number; instapay: number },
+    cashierName?: string
   ) => Promise<string>;
   processReturn: (orderId: string, productId: string, returnQty: number) => Promise<boolean>;
 
@@ -159,6 +172,12 @@ interface CashierStore {
 
   // Customers
   updateCustomer: (id: string, customer: Partial<Customer>) => Promise<void>;
+
+  // Cashiers
+  loadCashiers: () => Promise<void>;
+  addCashier: (cashier: Omit<Cashier, 'id' | 'created_at'>) => Promise<void>;
+  updateCashier: (id: string, cashier: Partial<Cashier>) => Promise<void>;
+  deleteCashier: (id: string) => Promise<void>;
 
   // Purchases
   loadPurchaseInvoices: () => Promise<void>;
@@ -212,6 +231,7 @@ export const useStore = create<CashierStore>((set, get) => ({
   categories: [],
   customers: [],
   suppliers: [],
+  cashiers: [],
   cart: [],
   orders: [],
   expenses: [],
@@ -220,6 +240,7 @@ export const useStore = create<CashierStore>((set, get) => ({
   activeInvoiceId: '1',
   isLoading: false,
   dbError: null,
+  activeCashier: null,
   isAdminAuthenticated: !!sessionStorage.getItem('cashier_admin_auth'),
   isPOSAuthenticated: !!sessionStorage.getItem('cashier_pos_auth'),
 
@@ -238,9 +259,19 @@ export const useStore = create<CashierStore>((set, get) => ({
   },
 
   loginPOS: (pin: string) => {
-    if (pin === '123456') { // POS PIN
+    const { cashiers } = get();
+    // Support master PIN 123456 or individual cashier PINs
+    if (pin === '123456') {
       sessionStorage.setItem('cashier_pos_auth', 'true');
-      set({ isPOSAuthenticated: true });
+      set({ isPOSAuthenticated: true, activeCashier: { id: 'master', name: 'المدير', pin: '123456', phone: '', photo: '', created_at: '' } });
+      return true;
+    }
+    
+    const cashier = cashiers.find(c => c.pin === pin);
+    if (cashier) {
+      sessionStorage.setItem('cashier_pos_auth', 'true');
+      sessionStorage.setItem('active_cashier_name', cashier.name);
+      set({ isPOSAuthenticated: true, activeCashier: cashier });
       return true;
     }
     return false;
@@ -248,14 +279,15 @@ export const useStore = create<CashierStore>((set, get) => ({
 
   logoutPOS: () => {
     sessionStorage.removeItem('cashier_pos_auth');
-    set({ isPOSAuthenticated: false });
+    sessionStorage.removeItem('active_cashier_name');
+    set({ isPOSAuthenticated: false, activeCashier: null });
   },
 
   // ── Load all data from Supabase ────────────────────────────
   loadAll: async () => {
     set({ isLoading: true, dbError: null });
     try {
-      const [settingsRes, categoriesRes, productsRes, customersRes, ordersRes, counterRes] =
+      const [settingsRes, categoriesRes, productsRes, customersRes, ordersRes, counterRes, cashiersRes] =
         await Promise.all([
           supabase.from('store_settings').select('*').limit(1).maybeSingle(),
           supabase.from('categories').select('*').order('name'),
@@ -267,6 +299,7 @@ export const useStore = create<CashierStore>((set, get) => ({
             .order('created_at', { ascending: false })
             .limit(200),
           supabase.from('invoice_counter').select('current_value').limit(1).maybeSingle(),
+          supabase.from('cashiers').select('*').order('created_at', { ascending: false }),
         ]);
 
       const settings = settingsRes.data ? mapSettings(settingsRes.data as Record<string, unknown>) : get().storeSettings;
@@ -309,6 +342,7 @@ export const useStore = create<CashierStore>((set, get) => ({
           payment_method: (o.payment_method as any) ?? 'cash',
           date: o.created_at as string,
           items,
+          cashier_name: (o.cashier_name as string) ?? undefined,
           customer: custRow
             ? { id: custRow.id as string, name: custRow.name as string, phone: custRow.phone as string, timestamp: custRow.created_at as string }
             : undefined,
@@ -326,10 +360,14 @@ export const useStore = create<CashierStore>((set, get) => ({
         })) as Product[],
         customers,
         orders,
+        cashiers: (cashiersRes.data ?? []) as Cashier[],
         expenses: [], // Default to empty
         invoiceCounter: counter,
         activeInvoiceId: counter.toString(),
         isLoading: false,
+        activeCashier: sessionStorage.getItem('active_cashier_name') 
+          ? ((cashiersRes.data ?? []) as Cashier[]).find(c => c.name === sessionStorage.getItem('active_cashier_name')) || null
+          : (sessionStorage.getItem('cashier_pos_auth') === 'true' ? { id: 'master', name: 'المدير', pin: '123456', phone: '', photo: '', created_at: '' } : null)
       });
 
       // Fetch expenses separately to avoid breaking the whole loadAll if the table is missing
@@ -422,8 +460,9 @@ export const useStore = create<CashierStore>((set, get) => ({
   clearCart: () => set({ cart: [] }),
 
   // ── Checkout ───────────────────────────────────────────────
-  checkout: async (total, customerDetails, paidAmount = total, type = 'sale', paymentMethod = 'cash', splitPayments) => {
+  checkout: async (total, customerDetails, paidAmount = total, type = 'sale', paymentMethod = 'cash', splitPayments, cashierName) => {
     const state = get();
+    const finalCashierName = cashierName || state.activeCashier?.name || 'غير معروف';
     if (state.cart.length === 0 && type !== 'payment') return state.activeInvoiceId;
 
     const invoiceId = state.activeInvoiceId;
@@ -484,7 +523,8 @@ export const useStore = create<CashierStore>((set, get) => ({
       paid_instapay: splitPayments?.instapay || (paymentMethod === 'instapay' ? savedPaidAmount : 0),
       type,
       customer_id: customerId,
-      payment_method: paymentMethod
+      payment_method: paymentMethod,
+      cashier_name: finalCashierName
     });
 
     if (orderError) {
@@ -533,6 +573,7 @@ export const useStore = create<CashierStore>((set, get) => ({
       payment_method: paymentMethod as any,
       date: new Date().toISOString(),
       customer: finalCustomer,
+      cashier_name: finalCashierName
     };
 
     const updatedProducts = state.products.map((p) => {
@@ -656,6 +697,7 @@ export const useStore = create<CashierStore>((set, get) => ({
         payment_method: (o.payment_method as any) ?? 'cash',
         date: o.created_at as string,
         items,
+        cashier_name: (o.cashier_name as string) ?? undefined,
         customer: custRow
           ? { id: custRow.id as string, name: custRow.name as string, phone: custRow.phone as string, timestamp: custRow.created_at as string }
           : undefined,
@@ -663,6 +705,27 @@ export const useStore = create<CashierStore>((set, get) => ({
     });
 
     return orders;
+  },
+
+  // ── Cashiers ──────────────────────────────────────────────
+  loadCashiers: async () => {
+    const { data } = await supabase.from('cashiers').select('*').order('created_at', { ascending: false });
+    if (data) set({ cashiers: data as Cashier[] });
+  },
+
+  addCashier: async (cashier) => {
+    const { data } = await supabase.from('cashiers').insert(cashier).select().single();
+    if (data) set((state) => ({ cashiers: [data as unknown as Cashier, ...state.cashiers] }));
+  },
+
+  updateCashier: async (id, updated) => {
+    await supabase.from('cashiers').update(updated).eq('id', id);
+    set((state) => ({ cashiers: state.cashiers.map((c) => (c.id === id ? { ...c, ...updated } : c)) }));
+  },
+
+  deleteCashier: async (id) => {
+    await supabase.from('cashiers').delete().eq('id', id);
+    set((state) => ({ cashiers: state.cashiers.filter((c) => c.id !== id) }));
   },
 
   updateSettings: async (newSettings) => {

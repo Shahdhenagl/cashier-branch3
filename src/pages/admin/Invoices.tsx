@@ -312,6 +312,7 @@ export default function Invoices() {
                 <th className="p-4">رقم الفاتورة</th>
                 <th className="p-4">بيانات العميل</th>
                 <th className="p-4">التاريخ والوقت</th>
+                <th className="p-4 text-center">المسؤول</th>
                 <th className="p-4">تفاصيل المنتجات</th>
                 <th className="p-4 text-center border-x border-slate-100 bg-slate-100/50">الإجمالي</th>
                 <th className="p-4 text-center text-orange-600">قيمة المرتجع</th>
@@ -348,6 +349,7 @@ export default function Invoices() {
                         )}
                       </td>
                       <td className="p-4 text-slate-500">{new Date(order.date).toLocaleString('ar-SA')}</td>
+                      <td className="p-4 text-center font-bold text-indigo-600">{order.cashier_name || 'غير معروف'}</td>
                       <td className="p-4 text-right">
                         {order.type === 'payment' ? (
                           <div className="flex items-center gap-2 text-indigo-600 font-bold">

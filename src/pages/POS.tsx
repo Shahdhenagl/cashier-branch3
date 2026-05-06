@@ -162,6 +162,7 @@ export default function POS() {
   </div>
 
   ${customerBlock}
+  <div style="font-size:11px; color:#64748b; margin-bottom:15px; text-align:right;">المسؤول عن الفاتورة: <strong>${activeCashier?.name || 'غير معروف'}</strong></div>
 
   <table>
     <thead><tr>
@@ -389,7 +390,6 @@ export default function POS() {
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-slate-900 transition-colors duration-300 overflow-hidden font-sans text-gray-900 dark:text-gray-100">
-      
 
       {/* SUCCESS MODAL */}
       {showSuccessModal && (
@@ -819,7 +819,29 @@ export default function POS() {
           )}
         </div>
 
-
+        <div className="flex items-center gap-6 p-4 border-t border-gray-100 dark:border-slate-700">
+            <div className="flex items-center gap-3 bg-white dark:bg-slate-800 px-4 py-2 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
+               {activeCashier?.photo ? (
+                 <img src={activeCashier.photo} alt={activeCashier.name} className="w-8 h-8 rounded-full object-cover" />
+               ) : (
+                 <div className="w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600">
+                    <User size={16} />
+                 </div>
+               )}
+               <div className="flex flex-col">
+                 <span className="text-[10px] text-slate-400 font-bold leading-none mb-0.5">أهلاً بك</span>
+                 <span className="text-xs font-black text-slate-800 dark:text-white leading-none">{activeCashier?.name || 'كاشير'}</span>
+               </div>
+            </div>
+            
+            <button 
+              onClick={() => { logoutPOS(); navigate('/pos-login'); }}
+              className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all"
+              title="خروج"
+            >
+              <LogOut size={20} />
+            </button>
+        </div>
 
         {/* Footer Checkout */}
         <div className="p-4 bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700 shadow-2xl">

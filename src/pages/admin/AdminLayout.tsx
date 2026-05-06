@@ -14,6 +14,7 @@ export default function AdminLayout() {
     { name: 'قاعدة العملاء', path: '/admin/customers', icon: Users },
     { name: 'الموردين والمشتريات', path: '/admin/suppliers', icon: Users },
     { name: 'حسابات الآجل', path: '/admin/deferred', icon: BookUser },
+    { name: 'إدارة المحاسبين', path: '/admin/cashiers', icon: Users },
     { name: 'الخزينة والمصاريف', path: '/admin/finance', icon: Wallet },
     { name: 'إعدادات النظام', path: '/admin/settings', icon: Settings },
   ];

@@ -13,6 +13,7 @@ import DeferredAccounts from './pages/admin/DeferredAccounts';
 import Settings from './pages/admin/Settings';
 import Analytics from './pages/admin/Analytics';
 import Finance from './pages/admin/Finance';
+import Cashiers from './pages/admin/Cashiers';
 import PublicInvoice from './pages/PublicInvoice';
 import { useStore } from './store/useStore';
 
@@ -158,6 +159,7 @@ function App() {
             <Route path="invoices" element={<Invoices />} />
             <Route path="customers" element={<Customers />} />
             <Route path="suppliers" element={<Suppliers />} />
+            <Route path="cashiers" element={<Cashiers />} />
             <Route path="deferred" element={<DeferredAccounts />} />
             <Route path="finance" element={<Finance />} />
             <Route path="settings" element={<Settings />} />
