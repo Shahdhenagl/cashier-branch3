@@ -826,7 +826,6 @@ export default function POS() {
             ))
           )}
         </div>
-        </div>
 
         {/* Footer Checkout */}
         <div className="p-4 bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700 shadow-2xl">
