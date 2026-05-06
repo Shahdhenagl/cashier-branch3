@@ -4,18 +4,23 @@ import { ShieldCheck, ArrowRight } from 'lucide-react';
 import { useStore } from '../store/useStore';
 
 export default function POSLogin() {
-  const [pin, setPin] = useState('');
+  const [name, setName] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState(false);
   const navigate = useNavigate();
-  const { loginPOS, storeSettings } = useStore();
+  const { loginPOS, storeSettings, cashiers, loadCashiers } = useStore();
+
+  useEffect(() => {
+    loadCashiers();
+  }, []);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (loginPOS(pin)) {
+    if (loginPOS(name, password)) {
       navigate('/');
     } else {
       setError(true);
-      setPin('');
+      setPassword('');
     }
   };
 
@@ -42,26 +47,42 @@ export default function POSLogin() {
           <h2 className="text-2xl font-black text-center text-slate-800 dark:text-white mb-2">تسجيل الدخول</h2>
           <p className="text-center text-slate-400 text-sm mb-8 font-bold">يرجى إدخال كلمة المرور للبدء</p>
           
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div className="relative">
-              <input
-                type="password"
-                dir="ltr"
-                value={pin}
-                onChange={(e) => {
-                  setPin(e.target.value);
-                  setError(false);
-                }}
-                className={`w-full bg-slate-50 dark:bg-slate-800/50 border-2 ${error ? 'border-red-500' : 'border-slate-100 dark:border-slate-800'} dark:text-white rounded-2xl py-4 px-4 text-center text-3xl font-black tracking-[0.5em] focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all placeholder:text-slate-200 dark:placeholder:text-slate-700`}
-                placeholder="••••••"
-                autoFocus
-              />
-              {error && (
-                <div className="absolute -bottom-6 left-0 w-full text-center">
-                  <p className="text-red-500 text-xs font-bold animate-bounce">كلمة المرور غير صحيحة، حاول مرة أخرى</p>
-                </div>
-              )}
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div className="space-y-1.5">
+               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-1">اسم الكاشير</label>
+               <select
+                 required
+                 value={name}
+                 onChange={(e) => setName(e.target.value)}
+                 className="w-full bg-slate-50 dark:bg-slate-800/50 border-2 border-slate-100 dark:border-slate-800 dark:text-white rounded-2xl py-3.5 px-4 font-bold focus:outline-none focus:border-indigo-500 transition-all"
+               >
+                 <option value="">اختر اسمك...</option>
+                 {cashiers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+               </select>
             </div>
+
+            <div className="space-y-1.5">
+               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-1">كلمة المرور</label>
+               <div className="relative">
+                <input
+                  type="password"
+                  dir="ltr"
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setError(false);
+                  }}
+                  className={`w-full bg-slate-50 dark:bg-slate-800/50 border-2 ${error ? 'border-red-500' : 'border-slate-100 dark:border-slate-800'} dark:text-white rounded-2xl py-4 px-4 text-center text-2xl font-black focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all placeholder:text-slate-200 dark:placeholder:text-slate-700`}
+                  placeholder="••••••••"
+                />
+              </div>
+            </div>
+
+            {error && (
+              <div className="text-center pt-2">
+                <p className="text-red-500 text-xs font-bold">الاسم أو كلمة المرور غير صحيحة، حاول مرة أخرى</p>
+              </div>
+            )}
 
             <button
               type="submit"

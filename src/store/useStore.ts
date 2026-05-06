@@ -42,9 +42,10 @@ export interface Supplier {
 export interface Cashier {
   id: string;
   name: string;
+  password?: string;
   pin: string;
   phone: string;
-  photo: string;
+  photo_url: string;
   created_at: string;
 }
 
@@ -193,7 +194,7 @@ interface CashierStore {
   isPOSAuthenticated: boolean;
   login: (pin: string) => boolean;
   logout: () => void;
-  loginPOS: (pin: string) => boolean;
+  loginPOS: (name: string, password?: string) => boolean;
   logoutPOS: () => void;
 }
 
@@ -258,16 +259,9 @@ export const useStore = create<CashierStore>((set, get) => ({
     set({ isAdminAuthenticated: false });
   },
 
-  loginPOS: (pin: string) => {
+  loginPOS: (name, password) => {
     const { cashiers } = get();
-    // Support master PIN 123456 or individual cashier PINs
-    if (pin === '123456') {
-      sessionStorage.setItem('cashier_pos_auth', 'true');
-      set({ isPOSAuthenticated: true, activeCashier: { id: 'master', name: 'المدير', pin: '123456', phone: '', photo: '', created_at: '' } });
-      return true;
-    }
-    
-    const cashier = cashiers.find(c => c.pin === pin);
+    const cashier = cashiers.find(c => c.name === name && c.password === password);
     if (cashier) {
       sessionStorage.setItem('cashier_pos_auth', 'true');
       sessionStorage.setItem('active_cashier_name', cashier.name);
@@ -462,7 +456,7 @@ export const useStore = create<CashierStore>((set, get) => ({
   // ── Checkout ───────────────────────────────────────────────
   checkout: async (total, customerDetails, paidAmount = total, type = 'sale', paymentMethod = 'cash', splitPayments, cashierName) => {
     const state = get();
-    const finalCashierName = cashierName || state.activeCashier?.name || 'غير معروف';
+    const finalCashierName = cashierName || state.activeCashier?.name || 'مدير النظام';
     if (state.cart.length === 0 && type !== 'payment') return state.activeInvoiceId;
 
     const invoiceId = state.activeInvoiceId;

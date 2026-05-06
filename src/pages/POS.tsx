@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
-import { ShoppingCart, Search, Plus, Minus, Trash2, Banknote, RefreshCcw, Moon, Sun, ArrowRightLeft, X, Printer, CreditCard, Smartphone, Zap } from 'lucide-react';
+import { ShoppingCart, Search, Plus, Minus, Trash2, Banknote, RefreshCcw, Moon, Sun, ArrowRightLeft, X, Printer, CreditCard, Smartphone, Zap, LogOut } from 'lucide-react';
 import { normalizeArabic } from '../utils/textUtils';
 
 
 export default function POS() {
-  const { products, categories, cart, addToCart, removeFromCart, updateQuantity, updatePrice, clearCart, checkout, processReturn, storeSettings, orders, activeInvoiceId, customers } = useStore();
+  const { products, categories, cart, addToCart, removeFromCart, updateQuantity, updatePrice, clearCart, checkout, processReturn, storeSettings, orders, activeInvoiceId, customers, activeCashier, logoutPOS } = useStore();
+  const navigate = useNavigate();
   
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -585,10 +587,16 @@ export default function POS() {
       <div className="flex-1 flex flex-col h-full bg-white dark:bg-slate-900 shadow-2xl z-10 w-2/3">
         <header className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md">
           <div className="flex items-center gap-4">
-            <img src={storeSettings.logo} alt="Logo" className="w-12 h-12 object-cover rounded-xl shadow-md border border-gray-100 dark:border-slate-700 bg-white p-1" />
-            <h1 className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-l from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400">
-              {storeSettings.name}
-            </h1>
+            <div className="relative group cursor-pointer" onClick={() => { if(confirm('هل تريد تسجيل الخروج؟')) { logoutPOS(); navigate('/pos-login'); } }}>
+              <img src={activeCashier?.photo_url || storeSettings.logo} alt="Logo" className="w-12 h-12 object-cover rounded-xl shadow-md border border-gray-100 dark:border-slate-700 bg-white p-0.5 group-hover:scale-110 transition-transform" />
+              <div className="absolute -bottom-1 -right-1 bg-green-500 w-4 h-4 rounded-full border-2 border-white dark:border-slate-900"></div>
+            </div>
+            <div className="flex flex-col">
+               <h1 className="text-xl font-black bg-clip-text text-transparent bg-gradient-to-l from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400">
+                أهلاً، {activeCashier?.name?.split(' ')[0] || 'المحاسب'}
+              </h1>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{storeSettings.name}</span>
+            </div>
           </div>
           <div className="flex items-center gap-4 flex-1 max-w-lg ml-6">
             <div className="relative w-full">
@@ -818,29 +826,6 @@ export default function POS() {
             ))
           )}
         </div>
-
-        <div className="flex items-center gap-6 p-4 border-t border-gray-100 dark:border-slate-700">
-            <div className="flex items-center gap-3 bg-white dark:bg-slate-800 px-4 py-2 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
-               {activeCashier?.photo ? (
-                 <img src={activeCashier.photo} alt={activeCashier.name} className="w-8 h-8 rounded-full object-cover" />
-               ) : (
-                 <div className="w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600">
-                    <User size={16} />
-                 </div>
-               )}
-               <div className="flex flex-col">
-                 <span className="text-[10px] text-slate-400 font-bold leading-none mb-0.5">أهلاً بك</span>
-                 <span className="text-xs font-black text-slate-800 dark:text-white leading-none">{activeCashier?.name || 'كاشير'}</span>
-               </div>
-            </div>
-            
-            <button 
-              onClick={() => { logoutPOS(); navigate('/pos-login'); }}
-              className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all"
-              title="خروج"
-            >
-              <LogOut size={20} />
-            </button>
         </div>
 
         {/* Footer Checkout */}

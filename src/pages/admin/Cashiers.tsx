@@ -8,9 +8,9 @@ export default function Cashiers() {
   const [editingCashier, setEditingCashier] = useState<any>(null);
   const [formData, setFormData] = useState({
     name: '',
-    pin: '',
+    password: '',
     phone: '',
-    photo: ''
+    photo_url: ''
   });
 
   useEffect(() => {
@@ -18,7 +18,7 @@ export default function Cashiers() {
   }, []);
 
   const resetForm = () => {
-    setFormData({ name: '', pin: '', phone: '', photo: '' });
+    setFormData({ name: '', password: '', phone: '', photo_url: '' });
     setEditingCashier(null);
   };
 
@@ -27,9 +27,9 @@ export default function Cashiers() {
       setEditingCashier(cashier);
       setFormData({
         name: cashier.name,
-        pin: cashier.pin,
+        password: cashier.password || '',
         phone: cashier.phone,
-        photo: cashier.photo || ''
+        photo_url: cashier.photo_url || ''
       });
     } else {
       resetForm();
@@ -74,15 +74,15 @@ export default function Cashiers() {
         {cashiers.map((cashier) => (
           <div key={cashier.id} className="bg-white dark:bg-slate-800 rounded-[32px] shadow-xl border border-slate-100 dark:border-slate-700 overflow-hidden group hover:shadow-2xl transition-all duration-300">
             <div className="h-24 relative" style={{ backgroundColor: storeSettings.themeColor + '20' }}>
-               <div className="absolute -bottom-10 right-8">
-                 {cashier.photo ? (
-                   <img src={cashier.photo} alt={cashier.name} className="w-20 h-20 rounded-2xl object-cover border-4 border-white dark:border-slate-800 shadow-lg" />
-                 ) : (
-                   <div className="w-20 h-20 rounded-2xl bg-white dark:bg-slate-700 flex items-center justify-center text-slate-300 border-4 border-white dark:border-slate-800 shadow-lg">
-                     <UserCircle size={40} />
-                   </div>
-                 )}
-               </div>
+                <div className="absolute -bottom-10 right-8">
+                  {cashier.photo_url ? (
+                    <img src={cashier.photo_url} alt={cashier.name} className="w-20 h-20 rounded-2xl object-cover border-4 border-white dark:border-slate-800 shadow-lg" />
+                  ) : (
+                    <div className="w-20 h-20 rounded-2xl bg-white dark:bg-slate-700 flex items-center justify-center text-slate-300 border-4 border-white dark:border-slate-800 shadow-lg">
+                      <UserCircle size={40} />
+                    </div>
+                  )}
+                </div>
             </div>
             
             <div className="pt-14 p-8">
@@ -95,7 +95,7 @@ export default function Cashiers() {
                 </div>
                 <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400">
                    <Lock size={16} />
-                   <span className="text-sm font-bold font-mono tracking-widest">PIN: {cashier.pin}</span>
+                   <span className="text-sm font-bold font-mono tracking-widest">Password: {cashier.password || '****'}</span>
                 </div>
               </div>
 
@@ -157,15 +157,15 @@ export default function Cashiers() {
                   
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest mr-1">الرقم السري (PIN)</label>
+                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest mr-1">كلمة المرور (Password)</label>
                       <input 
                         required
                         type="text" 
                         dir="ltr"
-                        value={formData.pin}
-                        onChange={(e) => setFormData({...formData, pin: e.target.value})}
-                        placeholder="123456"
-                        className="w-full bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-indigo-500 py-3.5 px-5 rounded-2xl focus:outline-none transition-all font-black text-center tracking-widest"
+                        value={formData.password}
+                        onChange={(e) => setFormData({...formData, password: e.target.value})}
+                        placeholder="••••••••"
+                        className="w-full bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-indigo-500 py-3.5 px-5 rounded-2xl focus:outline-none transition-all font-black text-center"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -186,8 +186,8 @@ export default function Cashiers() {
                     <div className="flex gap-2">
                       <input 
                         type="text" 
-                        value={formData.photo}
-                        onChange={(e) => setFormData({...formData, photo: e.target.value})}
+                        value={formData.photo_url}
+                        onChange={(e) => setFormData({...formData, photo_url: e.target.value})}
                         placeholder="https://..."
                         className="flex-1 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-indigo-500 py-3.5 px-5 rounded-2xl focus:outline-none transition-all font-bold"
                       />
