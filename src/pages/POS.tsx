@@ -823,14 +823,14 @@ export default function POS() {
         <div className="p-4 bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700 shadow-2xl">
           <div className="space-y-3 mb-4 px-1">
             <div className="flex justify-between items-center text-sm font-bold text-slate-500 dark:text-slate-400">
-               <span>المجموع: <span className="text-slate-800 dark:text-slate-200">{subtotal.toFixed(2)}</span></span>
-               <div className="flex items-center gap-2 bg-orange-50 dark:bg-orange-900/10 px-3 py-1.5 rounded-xl border border-orange-100 dark:border-orange-800/30">
-                 <span className="text-xs text-orange-600 font-black">خصم:</span>
+               <span>المجموع: <span className="text-slate-800 dark:text-slate-200 text-lg">{subtotal.toFixed(2)}</span></span>
+               <div className="flex items-center gap-2 bg-orange-100/50 dark:bg-orange-900/30 px-4 py-2 rounded-2xl border-2 border-orange-200 dark:border-orange-800/50 shadow-sm transition-all focus-within:border-orange-400 focus-within:ring-2 focus-within:ring-orange-100">
+                 <span className="text-xs text-orange-600 dark:text-orange-400 font-black flex items-center gap-1">🏷️ خصم:</span>
                  <input 
                    type="number" dir="ltr" value={discountStr} 
                    onChange={(e) => setDiscountStr(e.target.value)} 
                    placeholder="0.00" 
-                   className="w-16 bg-transparent border-0 p-0 text-sm font-black focus:ring-0 text-left text-orange-700 dark:text-orange-400 placeholder-orange-200" 
+                   className="w-20 bg-transparent border-0 p-0 text-base font-black focus:ring-0 text-left text-orange-700 dark:text-orange-300 placeholder-orange-300" 
                  />
                </div>
             </div>
