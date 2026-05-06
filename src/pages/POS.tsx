@@ -409,15 +409,17 @@ export default function POS() {
                        const sendWhatsApp = (invId: string, customerPhone: string, orderDetails: any) => {
                           if (!customerPhone.trim()) return;
                           let itemsText = orderDetails.cart.map((item: any) => `• ${item.name} (عدد: ${item.quantity}) - ${(item.sale_price * item.quantity).toFixed(2)} ${storeSettings.currency}`).join('\n');
-                          const message = `*فاتورة جديدة من ${storeSettings.name}* 🧾\n\n` +
-                            `*رقم الفاتورة:* #${invId}\n` +
-                            `*التاريخ:* ${new Date().toLocaleString('ar-SA')}\n` +
-                            `*الإجمالي:* ${orderDetails.total.toFixed(2)} ${storeSettings.currency}\n\n` +
-                            `*تفاصيل الطلب:*\n${itemsText}\n\n` +
-                            `${storeSettings.address ? `📍 *العنوان:* ${storeSettings.address}\n` : ''}` +
-                            `${storeSettings.phone ? `📞 *للتواصل:* ${storeSettings.phone}\n` : ''}` +
-                            `\n*شكراً لتعاملكم معنا، في انتظاركم مرة أخرى!* ❤️\n` +
-                            `*ما رأيك في خدمتنا؟ نسعد بتلقي ملاحظاتك.*`;
+                           const invoiceLink = `${window.location.origin}/view-invoice/${invId}`;
+                           const message = `*فاتورة جديدة من ${storeSettings.name}* 🧾\n\n` +
+                             `*رقم الفاتورة:* #${invId}\n` +
+                             `*التاريخ:* ${new Date().toLocaleString('ar-SA')}\n` +
+                             `*الإجمالي:* ${orderDetails.total.toFixed(2)} ${storeSettings.currency}\n\n` +
+                             `*عرض الفاتورة بالتفاصيل:* 👇\n${invoiceLink}\n\n` +
+                             `*تفاصيل الطلب:*\n${itemsText}\n\n` +
+                             `${storeSettings.address ? `📍 *العنوان:* ${storeSettings.address}\n` : ''}` +
+                             `${storeSettings.phone ? `📞 *للتواصل:* ${storeSettings.phone}\n` : ''}` +
+                             `\n*شكراً لتعاملكم معنا، في انتظاركم مرة أخرى!* ❤️\n` +
+                             `*ما رأيك في خدمتنا؟ نسعد بتلقي ملاحظاتك.*`;
                           let cleanPhone = customerPhone.replace(/\D/g, '');
                           const code = storeSettings.whatsappCountryCode || '2';
                           
