@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import type { Order, StoreSettings } from '../store/useStore';
-import { CheckCircle2, AlertCircle, Printer, Download } from 'lucide-react';
+import { CheckCircle2, Printer, Download } from 'lucide-react';
 import html2canvas from 'html2canvas';
 
 export default function PublicInvoice() {
