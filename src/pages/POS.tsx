@@ -30,7 +30,6 @@ export default function POS() {
   const [lastCustomerInfo, setLastCustomerInfo] = useState<any>(null);
   const [lastOrderDetails, setLastOrderDetails] = useState<any>(null);
   const [showCustomerSuggestions, setShowCustomerSuggestions] = useState(false);
-  const [showCustomerSuggestions, setShowCustomerSuggestions] = useState(false);
 
   useEffect(() => {
     if (isDarkMode) {
