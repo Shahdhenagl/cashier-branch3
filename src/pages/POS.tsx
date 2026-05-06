@@ -820,44 +820,49 @@ export default function POS() {
 
 
         {/* Footer Checkout */}
-        <div className="p-3 bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700 shadow-2xl">
-          <div className="space-y-2 mb-3 px-1">
-            <div className="flex justify-between items-center text-[10px] font-bold text-slate-400">
-               <span>المجموع: {subtotal.toFixed(2)}</span>
-               <div className="flex items-center gap-1.5">
-                 <span>خصم:</span>
-                 <input type="number" dir="ltr" value={discountStr} onChange={(e) => setDiscountStr(e.target.value)} placeholder="0.00" className="w-12 bg-orange-50 dark:bg-orange-900/20 border-0 p-0 text-[10px] font-black focus:ring-0 text-left rounded" />
+        <div className="p-4 bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700 shadow-2xl">
+          <div className="space-y-3 mb-4 px-1">
+            <div className="flex justify-between items-center text-sm font-bold text-slate-500 dark:text-slate-400">
+               <span>المجموع: <span className="text-slate-800 dark:text-slate-200">{subtotal.toFixed(2)}</span></span>
+               <div className="flex items-center gap-2 bg-orange-50 dark:bg-orange-900/10 px-3 py-1.5 rounded-xl border border-orange-100 dark:border-orange-800/30">
+                 <span className="text-xs text-orange-600 font-black">خصم:</span>
+                 <input 
+                   type="number" dir="ltr" value={discountStr} 
+                   onChange={(e) => setDiscountStr(e.target.value)} 
+                   placeholder="0.00" 
+                   className="w-16 bg-transparent border-0 p-0 text-sm font-black focus:ring-0 text-left text-orange-700 dark:text-orange-400 placeholder-orange-200" 
+                 />
                </div>
             </div>
 
-            <div className="flex justify-between items-center pt-2 border-t border-slate-100 dark:border-slate-700/50">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">الإجمالي النهائي</span>
-              <span className="text-2xl font-black text-indigo-600 dark:text-indigo-400 tracking-tighter">
-                {total.toFixed(2)} <span className="text-[10px] text-slate-400 font-bold tracking-normal">{storeSettings.currency}</span>
+            <div className="flex justify-between items-center pt-3 border-t border-slate-100 dark:border-slate-700/50">
+              <span className="text-xs font-black text-slate-400 uppercase tracking-widest">الإجمالي النهائي</span>
+              <span className="text-3xl font-black text-indigo-600 dark:text-indigo-400 tracking-tighter">
+                {total.toFixed(2)} <span className="text-xs text-slate-400 font-bold tracking-normal">{storeSettings.currency}</span>
               </span>
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             <button
               onClick={() => { setShouldPrint(false); setShowCheckoutModal(true); }}
               disabled={cart.length === 0}
               style={cart.length > 0 ? { background: storeSettings.themeColor } : {}}
-              className="flex-1 disabled:bg-gray-300 text-white py-3.5 rounded-2xl font-black flex flex-col items-center justify-center gap-0.5 transition-all text-xs active:scale-95 shadow-md group"
+              className="flex-1 disabled:bg-gray-300 text-white py-4 rounded-2xl font-black flex flex-col items-center justify-center gap-1 transition-all text-sm active:scale-95 shadow-lg disabled:shadow-none group"
             >
-              <Banknote size={16} className="group-hover:scale-110 transition-transform" />
+              <Banknote size={20} className="group-hover:scale-110 transition-transform" />
               <span>تحصيل ودفع</span>
             </button>
             <button
               onClick={() => { setShouldPrint(true); setShowCheckoutModal(true); }}
               disabled={cart.length === 0}
-              className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-500 text-white py-3.5 rounded-2xl font-black flex flex-col items-center justify-center gap-0.5 transition-all text-xs active:scale-95 shadow-md group"
+              className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-500 text-white py-4 rounded-2xl font-black flex flex-col items-center justify-center gap-1 transition-all text-sm active:scale-95 shadow-lg shadow-emerald-500/20 disabled:shadow-none group"
             >
-              <Printer size={16} className="group-hover:rotate-12 transition-transform" />
+              <Printer size={20} className="group-hover:rotate-12 transition-transform" />
               <span>دفع وطباعة</span>
             </button>
           </div>
-          <button onClick={clearCart} className="w-full text-slate-400 hover:text-red-500 text-[10px] font-bold py-2 transition-colors">
+          <button onClick={clearCart} className="w-full text-slate-400 hover:text-red-500 text-xs font-bold py-3 transition-colors">
             إلغاء الطلب والتفريغ
           </button>
         </div>
