@@ -81,7 +81,15 @@ export default function Finance() {
     const inc = dailyOrders.reduce((sum, o) => sum + ((o as any)[field] || 0), 0);
     const outExp = dailyExpenses.reduce((sum, e) => sum + ((e as any)[field] || 0), 0);
     const outPur = dailyPurchases.reduce((sum, inv) => sum + ((inv as any)[field] || 0), 0);
-    return inc - outExp - outPur;
+    
+    const outRet = dailyOrders.reduce((sum, o) => {
+      if (o.payment_method !== method) return sum;
+      const itemsSum = o.items.reduce((s, i) => s + (i.quantity * i.sale_price), 0);
+      const discountRatio = itemsSum > 0 ? o.total / itemsSum : 1;
+      return sum + (o.items.reduce((iSum, item) => iSum + (item.returned_quantity * item.sale_price), 0) * discountRatio);
+    }, 0);
+
+    return inc - outExp - outPur - outRet;
   };
 
   const methodsBreakdown = {
@@ -106,6 +114,24 @@ export default function Finance() {
         time: new Date(o.date).toLocaleTimeString('ar-SA'),
         rawDate: o.date
       });
+
+      // Add return entry if any items were returned in this order
+      const itemsSum = o.items.reduce((s, i) => s + (i.quantity * i.sale_price), 0);
+      const discountRatio = itemsSum > 0 ? o.total / itemsSum : 1;
+      const returnedVal = o.items.reduce((s, i) => s + (i.returned_quantity * i.sale_price), 0) * discountRatio;
+      
+      if (returnedVal > 0) {
+        list.push({
+          id: `${o.id}-return`,
+          type: 'مرتجع مبيعات',
+          amount: returnedVal,
+          method: o.payment_method,
+          note: `مرتجع من فاتورة #${o.id}`,
+          isOut: true,
+          time: new Date(o.date).toLocaleTimeString('ar-SA'),
+          rawDate: o.date
+        });
+      }
     });
 
     dailyExpenses.forEach(e => {
