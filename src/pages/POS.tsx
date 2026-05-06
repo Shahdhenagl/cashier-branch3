@@ -823,6 +823,8 @@ export default function POS() {
 
 
 
+        {/* Footer Checkout */}
+        <div className="p-3 bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700 shadow-2xl">
           <div className="space-y-2 mb-3 px-1">
             <div className="flex justify-between items-center text-[10px] font-bold text-slate-400">
                <span>المجموع: {subtotal.toFixed(2)}</span>
