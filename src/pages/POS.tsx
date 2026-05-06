@@ -701,7 +701,7 @@ export default function POS() {
 
           <div className="absolute inset-0 bg-black/20 rounded-bl-[40px]"></div>
 
-          <div className="relative flex justify-between items-center">
+          <div className="relative flex justify-between items-center mb-4">
              <h2 className="text-xl font-black flex items-center gap-2 drop-shadow">
               <ShoppingCart size={24} />
               الفاتورة
@@ -715,70 +715,57 @@ export default function POS() {
               </div>
             </div>
           </div>
-          <div className="relative flex gap-2 text-sm h-12">
-            <div className="flex-1">
-              <input 
-                type="text" 
-                dir="ltr" 
-                value={customerId} 
-                onChange={handleIdChange} 
-                className="w-full bg-white/95 text-indigo-600 dark:text-indigo-400 placeholder-slate-400 border-2 border-indigo-200 dark:border-indigo-900/50 py-2.5 px-3 rounded-xl focus:ring-2 focus:ring-white focus:outline-none transition font-black shadow-inner text-sm h-full" 
-                placeholder="رقم الكارت (ID)" 
-              />
-            </div>
-            <div className="flex-1">
-              <input 
-                type="text" 
-                dir="ltr" 
-                value={customerPhone} 
-                onChange={handlePhoneChange} 
-                className="w-full bg-white/95 text-slate-800 placeholder-slate-400 border-0 py-2.5 px-3 rounded-xl focus:ring-2 focus:ring-white focus:outline-none transition font-medium shadow-inner text-sm h-full" 
-                placeholder="رقم الموبايل" 
-              />
-            </div>
-            <div className="flex-[1.2] relative">
-              <input 
-                type="text" 
-                value={customerName} 
-                onChange={e => {
-                  setCustomerName(e.target.value);
-                  setShowCustomerSuggestions(true);
-                }} 
-                onFocus={() => setShowCustomerSuggestions(true)}
-                className="w-full bg-white/95 text-slate-800 placeholder-slate-400 border-0 py-2.5 px-3 rounded-xl focus:ring-2 focus:ring-white focus:outline-none transition font-medium shadow-inner text-sm h-full" 
-                placeholder={`اسم العميل...`} 
-              />
-              
-              {showCustomerSuggestions && filteredCustomers.length > 0 && (
-                <div className="absolute z-[200] left-0 right-0 top-full mt-1 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-gray-100 dark:border-slate-700 max-h-64 overflow-y-auto">
 
+          {/* Customer Inputs Grid */}
+          <div className="relative grid grid-cols-3 gap-2 text-sm">
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-bold text-white/70 mr-1 flex items-center gap-1"><CreditCard size={10}/> رقم الكارت</label>
+              <input 
+                type="text" dir="ltr" value={customerId} onChange={handleIdChange} 
+                className="w-full bg-white/95 text-indigo-600 dark:text-indigo-400 placeholder-slate-400 border-0 py-2.5 px-3 rounded-xl focus:ring-2 focus:ring-white focus:outline-none transition font-black shadow-inner text-sm" 
+                placeholder="ID" 
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-bold text-white/70 mr-1 flex items-center gap-1"><Smartphone size={10}/> الموبايل</label>
+              <input 
+                type="text" dir="ltr" value={customerPhone} onChange={handlePhoneChange} 
+                className="w-full bg-white/95 text-slate-800 placeholder-slate-400 border-0 py-2.5 px-3 rounded-xl focus:ring-2 focus:ring-white focus:outline-none transition font-medium shadow-inner text-sm" 
+                placeholder="01xxx" 
+              />
+            </div>
+            <div className="flex flex-col gap-1 relative">
+              <label className="text-[10px] font-bold text-white/70 mr-1 flex items-center gap-1"><ShoppingCart size={10}/> العميل</label>
+              <input 
+                type="text" value={customerName} 
+                onChange={e => { setCustomerName(e.target.value); setShowCustomerSuggestions(true); }} 
+                onFocus={() => setShowCustomerSuggestions(true)}
+                className="w-full bg-white/95 text-slate-800 placeholder-slate-400 border-0 py-2.5 px-3 rounded-xl focus:ring-2 focus:ring-white focus:outline-none transition font-medium shadow-inner text-sm" 
+                placeholder="الاسم" 
+              />
+              {showCustomerSuggestions && filteredCustomers.length > 0 && (
+                <div className="absolute z-[200] left-0 right-0 top-full mt-2 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-slate-700 max-h-64 overflow-y-auto">
                   {filteredCustomers.map(c => (
                     <button
-                      key={c.id}
-                      onClick={() => handleSelectCustomer(c)}
-                      className="w-full text-right px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-700/50 flex items-center justify-between border-b border-gray-50 dark:border-slate-700 last:border-0"
+                      key={c.id} onClick={() => handleSelectCustomer(c)}
+                      className="w-full text-right px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 flex items-center justify-between border-b border-gray-50 dark:border-slate-700 last:border-0"
                     >
                       <div className="flex flex-col">
                         <span className="font-bold text-slate-800 dark:text-slate-100">{c.name}</span>
                         <span className="text-[10px] text-slate-400 font-mono" dir="ltr">{c.phone}</span>
                       </div>
-                      <div className="bg-indigo-600 dark:bg-indigo-500 px-3 py-2 rounded-xl border border-indigo-700 dark:border-indigo-400 text-center min-w-[90px] shadow-sm">
-                        <p className="text-[8px] font-bold text-white/70 uppercase mb-0.5">رقم الكارت</p>
-                        <p className="text-xs font-black text-white font-mono tracking-wider">{c.custom_id || c.id.substring(0, 8)}</p>
-                      </div>
+                      <div className="bg-indigo-600 px-3 py-1.5 rounded-lg text-white font-mono text-[10px] font-black">{c.custom_id || c.id.substring(0, 6)}</div>
                     </button>
                   ))}
                 </div>
               )}
-              {showCustomerSuggestions && customerName.trim() !== '' && (
-                <div className="fixed inset-0 z-[105]" onClick={() => setShowCustomerSuggestions(false)} />
-              )}
             </div>
           </div>
+
           {customerDebt > 0 && (
-            <div className="relative bg-black/20 border border-white/20 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center justify-between">
-              <span>⚠️ تنبيه: هذا العميل عليه مديونية سابقة</span>
-              <span className="bg-white/20 text-white px-2 py-0.5 rounded-md font-mono border border-white/30">{customerDebt.toFixed(2)} {storeSettings.currency}</span>
+            <div className="relative mt-3 bg-black/20 border border-white/20 text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-between">
+              <span>⚠️ مديونية سابقة:</span>
+              <span className="bg-red-500 text-white px-2 py-0.5 rounded-lg font-mono border border-red-400">{customerDebt.toFixed(2)} {storeSettings.currency}</span>
             </div>
           )}
         </div>
@@ -866,45 +853,49 @@ export default function POS() {
                 <span>{tax.toFixed(2)} {storeSettings.currency}</span>
               </div>
             )}
-            <div className="flex justify-between text-3xl font-black text-gray-800 dark:text-gray-100 pt-2 border-b border-gray-200 dark:border-slate-700 pb-4">
-              <span>الإجمالي</span>
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400">
-                {total.toFixed(2)} <span className="text-lg text-gray-500 dark:text-gray-400 font-bold">{storeSettings.currency}</span>
+            <div className="flex justify-between items-end mb-4 pt-4 border-t border-slate-200/50">
+              <span className="text-sm font-black text-slate-400">الإجمالي النهائي</span>
+              <span className="text-4xl font-black text-indigo-600 dark:text-indigo-400 tracking-tighter">
+                {total.toFixed(2)} <span className="text-sm text-slate-400 font-bold tracking-normal">{storeSettings.currency}</span>
               </span>
             </div>
             
-            <div className="pt-2">
-              <label className="text-xs text-slate-500 mb-2 block font-bold">تفاصيل الدفع (كاش / فيزا / محفظة / انستا)</label>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="relative">
-                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">كاش</span>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
+                <span>طرق الدفع</span>
+                <span className="text-indigo-600">تقسيم المبلغ</span>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="group relative">
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors"><Banknote size={14}/></span>
                   <input 
-                    type="number" dir="ltr" value={paidCash} onChange={(e) => setPaidCash(e.target.value)}
-                    className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 py-2 pr-8 pl-2 rounded-lg focus:ring-1 focus:ring-indigo-500 font-bold text-sm focus:outline-none transition text-left" 
+                    type="number" dir="ltr" value={paidCash} onChange={(e) => setPaidCash(e.target.value)} placeholder="كاش"
+                    className="w-full bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 py-2.5 pr-9 pl-3 rounded-2xl focus:border-indigo-500 focus:outline-none transition-all font-black text-sm text-left" 
                   />
                 </div>
-                <div className="relative">
-                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">فيزا</span>
+                <div className="group relative">
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-500 transition-colors"><CreditCard size={14}/></span>
                   <input 
-                    type="number" dir="ltr" value={paidVisa} onChange={(e) => setPaidVisa(e.target.value)}
-                    className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 py-2 pr-8 pl-2 rounded-lg focus:ring-1 focus:ring-indigo-500 font-bold text-sm focus:outline-none transition text-left" 
+                    type="number" dir="ltr" value={paidVisa} onChange={(e) => setPaidVisa(e.target.value)} placeholder="فيزا"
+                    className="w-full bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 py-2.5 pr-9 pl-3 rounded-2xl focus:border-blue-500 focus:outline-none transition-all font-black text-sm text-left" 
                   />
                 </div>
-                <div className="relative">
-                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">محفظة</span>
+                <div className="group relative">
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-emerald-500 transition-colors"><Smartphone size={14}/></span>
                   <input 
-                    type="number" dir="ltr" value={paidWallet} onChange={(e) => setPaidWallet(e.target.value)}
-                    className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 py-2 pr-10 pl-2 rounded-lg focus:ring-1 focus:ring-indigo-500 font-bold text-sm focus:outline-none transition text-left" 
+                    type="number" dir="ltr" value={paidWallet} onChange={(e) => setPaidWallet(e.target.value)} placeholder="محفظة"
+                    className="w-full bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 py-2.5 pr-9 pl-3 rounded-2xl focus:border-emerald-500 focus:outline-none transition-all font-black text-sm text-left" 
                   />
                 </div>
-                <div className="relative">
-                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">انستا</span>
+                <div className="group relative">
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-orange-500 transition-colors"><Zap size={14}/></span>
                   <input 
-                    type="number" dir="ltr" value={paidInstapay} onChange={(e) => setPaidInstapay(e.target.value)}
-                    className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 py-2 pr-8 pl-2 rounded-lg focus:ring-1 focus:ring-indigo-500 font-bold text-sm focus:outline-none transition text-left" 
+                    type="number" dir="ltr" value={paidInstapay} onChange={(e) => setPaidInstapay(e.target.value)} placeholder="انستا"
+                    className="w-full bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 py-2.5 pr-9 pl-3 rounded-2xl focus:border-orange-500 focus:outline-none transition-all font-black text-sm text-left" 
                   />
                 </div>
               </div>
+
               <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700 flex justify-between items-center">
                 <span className="text-xs font-bold text-slate-500">إجمالي المدفوع: {effectivePaid.toFixed(2)}</span>
                 <div className="text-right">
@@ -923,21 +914,21 @@ export default function POS() {
                 onClick={() => handleCheckoutClick(false)}
                 disabled={cart.length === 0}
                 style={cart.length > 0 ? { background: storeSettings.themeColor } : {}}
-                className="flex-1 disabled:bg-gray-300 dark:disabled:bg-slate-700 disabled:text-gray-500 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg disabled:shadow-none text-base"
+                className="flex-1 disabled:bg-gray-300 dark:disabled:bg-slate-700 disabled:text-gray-500 text-white py-4 rounded-[24px] font-black flex items-center justify-center gap-2 transition-all shadow-lg disabled:shadow-none text-base active:scale-95 group"
               >
-                <Banknote size={22} />
+                <Banknote size={22} className="group-hover:scale-110 transition-transform" />
                 تحصيل ودفع
               </button>
               <button
                 onClick={() => handleCheckoutClick(true)}
                 disabled={cart.length === 0}
-                className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 disabled:from-gray-300 disabled:to-gray-400 dark:disabled:from-slate-700 dark:disabled:to-slate-700 disabled:text-gray-500 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-500/20 disabled:shadow-none text-base border border-transparent"
+                className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 disabled:from-gray-300 disabled:to-gray-400 dark:disabled:from-slate-700 dark:disabled:to-slate-700 disabled:text-gray-500 text-white py-4 rounded-[24px] font-black flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-500/20 disabled:shadow-none text-base active:scale-95 group"
               >
-                <Printer size={22} />
+                <Printer size={22} className="group-hover:rotate-12 transition-transform" />
                 دفع وطباعة
               </button>
             </div>
-            <button onClick={clearCart} disabled={cart.length === 0} className="w-full border-2 border-gray-100 dark:border-slate-700 text-gray-500 dark:text-gray-400 disabled:opacity-50 py-3 rounded-2xl font-bold hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 hover:border-red-100 dark:hover:border-red-900/30 transition-all">
+            <button onClick={clearCart} disabled={cart.length === 0} className="w-full text-slate-400 hover:text-red-500 text-xs font-bold transition-colors py-2">
               إلغاء الطلب والتفريغ
             </button>
           </div>
