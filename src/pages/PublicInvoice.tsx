@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import type { Order, StoreSettings } from '../store/useStore';
-import { ShoppingCart, MapPin, Phone, CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Printer, Download } from 'lucide-react';
+import html2canvas from 'html2canvas';
 
 export default function PublicInvoice() {
   const { id } = useParams<{ id: string }>();
@@ -48,6 +49,7 @@ export default function PublicInvoice() {
             id: o.customers.id, 
             name: o.customers.name, 
             phone: o.customers.phone, 
+            custom_id: o.customers.custom_id,
             timestamp: o.customers.created_at 
           } : undefined
         } as any);
@@ -77,13 +79,23 @@ export default function PublicInvoice() {
     if (id) fetchData();
   }, [id]);
 
+  const downloadAsImage = async () => {
+    const element = document.getElementById('invoice-print-area');
+    if (!element) return;
+    const canvas = await html2canvas(element, { scale: 3, backgroundColor: '#ffffff' });
+    const link = document.createElement('a');
+    link.download = `invoice-${order?.id}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  };
+
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50">
       <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
     </div>
   );
 
-  if (error || !order) return (
+  if (error || !order || !settings) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-white p-6 text-center">
       <div className="text-red-500 text-6xl mb-4">⚠️</div>
       <h1 className="text-2xl font-black text-slate-800">عذراً، الفاتورة غير موجودة</h1>
@@ -91,99 +103,167 @@ export default function PublicInvoice() {
     </div>
   );
 
-  const themeColor = settings?.themeColor || '#4f46e5';
+  const subtotal = order.items.reduce((sum, item) => sum + (item.quantity * item.sale_price), 0);
+  const taxRate = settings.taxRate || 0;
+  // If Tax exists: Total = (Subtotal - Discount) * (1 + TaxRate)
+  // Discount = Subtotal - (Total / (1 + TaxRate))
+  const calculatedDiscount = Math.max(0, subtotal - (order.total / (1 + (taxRate / 100))));
+  const taxValue = (subtotal - calculatedDiscount) * (taxRate / 100);
+  const isPayment = order.type === 'payment';
 
   return (
-    <div className="min-h-screen bg-slate-50 py-8 px-4 font-sans" dir="rtl">
-      <div className="max-w-md mx-auto bg-white rounded-[40px] shadow-2xl overflow-hidden border border-gray-100 relative">
+    <div className="min-h-screen bg-slate-100 py-10 px-4 font-sans flex flex-col items-center gap-6" dir="rtl">
+      
+      {/* Action Buttons */}
+      <div className="flex gap-4 no-print">
+         <button onClick={() => window.print()} className="flex items-center gap-2 bg-slate-800 text-white px-6 py-3 rounded-2xl font-bold shadow-lg hover:bg-slate-900 transition">
+            <Printer size={20} /> طباعة
+         </button>
+         <button onClick={downloadAsImage} className="flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-2xl font-bold shadow-lg hover:bg-indigo-700 transition">
+            <Download size={20} /> حفظ كصورة
+         </button>
+      </div>
+
+      {/* Invoice Area - Styled to match A5 Print */}
+      <div id="invoice-print-area" className="bg-white w-full max-w-[148mm] min-h-[210mm] shadow-2xl p-[12mm] flex flex-col relative border border-gray-200 rounded-sm">
         
-        {/* Header Decor */}
-        <div className="h-32 relative flex items-center justify-center" style={{ background: themeColor }}>
-           <div className="absolute inset-0 bg-black/10"></div>
-           <div className="relative text-center">
-              {settings?.logo && <img src={settings.logo} alt="Logo" className="w-16 h-16 rounded-2xl bg-white p-1 mx-auto mb-2 shadow-lg" />}
-              <h1 className="text-xl font-black text-white">{settings?.name}</h1>
+        {/* Header */}
+        <div className="flex justify-between items-center border-b-4 border-slate-800 pb-4 mb-6">
+          <div className="flex items-center gap-4">
+            {settings.logo && <img src={settings.logo} alt="Logo" className="w-16 h-16 object-contain rounded-xl" />}
+            <div>
+              <h1 className="text-2xl font-black text-slate-800 leading-none">{settings.name}</h1>
+              <div className="text-[11px] text-slate-500 mt-1.5 leading-relaxed">
+                {settings.address && <span>📍 {settings.address}<br/></span>}
+                {settings.phone && <span>📞 {settings.phone}</span>}
+                {settings.phone2 && <span> | {settings.phone2}</span>}
+              </div>
+            </div>
+          </div>
+          <div className="bg-slate-800 text-white px-5 py-2 rounded-lg font-black text-lg">
+             {isPayment ? 'إيصال سداد' : 'فاتورة بيع'}
+          </div>
+        </div>
+
+        {/* Info Grid */}
+        <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6">
+           <div className="space-y-2">
+              <div className="text-[13px] flex gap-2">
+                <strong className="text-slate-500">اسم العميل:</strong>
+                <span className="text-slate-800 font-bold">{order.customer?.name || 'عميل نقدي'}</span>
+              </div>
+              <div className="text-[13px] flex gap-2">
+                <strong className="text-slate-500">رقم الهاتف:</strong>
+                <span className="text-slate-800 font-bold font-mono">{order.customer?.phone || '-'}</span>
+              </div>
+           </div>
+           <div className="space-y-2 text-left">
+              <div className="text-[13px] flex gap-2 justify-end">
+                <strong className="text-slate-500">:رقم الفاتورة</strong>
+                <span className="text-slate-800 font-bold font-mono">#{order.id}</span>
+              </div>
+              {order.customer?.custom_id && (
+                <div className="text-[13px] flex gap-2 justify-end">
+                  <strong className="text-slate-500">:رقم الكارت (ID)</strong>
+                  <span className="text-slate-800 font-bold font-mono">{order.customer.custom_id}</span>
+                </div>
+              )}
+              <div className="text-[13px] flex gap-2 justify-end">
+                <strong className="text-slate-500">:التاريخ</strong>
+                <span className="text-slate-800 font-bold">{new Date(order.date).toLocaleString('ar-SA')}</span>
+              </div>
            </div>
         </div>
 
-        <div className="p-8 -mt-6 bg-white rounded-t-[40px] relative">
-          <div className="flex justify-center mb-6">
-            <div className="bg-emerald-50 text-emerald-600 px-6 py-2 rounded-full font-black text-sm flex items-center gap-2 border border-emerald-100">
-               <CheckCircle2 size={18} />
-               فاتورة مدفوعة
-            </div>
+        {/* Items Table */}
+        <table className="w-full mb-6 text-sm">
+          <thead>
+            <tr className="bg-slate-100 border-b-2 border-slate-300">
+              <th className="p-3 w-10 text-center text-slate-600 font-bold">#</th>
+              <th className="p-3 text-right text-slate-600 font-bold">{isPayment ? 'البيان' : 'البيان / المنتج'}</th>
+              {!isPayment && <th className="p-3 w-16 text-center text-slate-600 font-bold">الكمية</th>}
+              <th className="p-3 w-24 text-center text-slate-600 font-bold">السعر</th>
+              <th className="p-3 w-28 text-left text-slate-600 font-bold">الإجمالي</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {order.items.map((item, idx) => (
+              <tr key={idx}>
+                <td className="p-3 text-center text-slate-400 font-bold">{idx + 1}</td>
+                <td className="p-3 font-bold text-slate-800">{item.name}</td>
+                {!isPayment && <td className="p-3 text-center font-bold text-slate-800">{item.quantity}</td>}
+                <td className="p-3 text-center font-bold text-slate-800">{item.sale_price.toFixed(2)}</td>
+                <td className="p-3 text-left font-black text-slate-800">{(item.quantity * item.sale_price).toFixed(2)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {/* Summary Section */}
+        <div className="mr-auto w-3/5 mt-auto">
+          {!isPayment && (
+            <>
+              <div className="flex justify-between py-2 border-b border-slate-50 text-[13px]">
+                 <span className="text-slate-500 font-bold">المجموع الفرعي:</span>
+                 <span className="text-slate-800 font-bold">{subtotal.toFixed(2)} {settings.currency}</span>
+              </div>
+              {calculatedDiscount > 0.5 && (
+                <div className="flex justify-between py-2 border-b border-slate-50 text-[13px] text-red-500 font-bold">
+                   <span>🏷️ الخصم:</span>
+                   <span>- {calculatedDiscount.toFixed(2)} {settings.currency}</span>
+                </div>
+              )}
+              {taxRate > 0 && (
+                <div className="flex justify-between py-2 border-b border-slate-50 text-[13px]">
+                   <span className="text-slate-500 font-bold">الضريبة ({taxRate}%):</span>
+                   <span className="text-slate-800 font-bold">{taxValue.toFixed(2)} {settings.currency}</span>
+                </div>
+              )}
+              <div className="flex justify-between py-3 border-t-2 border-slate-800 mt-1 font-black text-lg text-slate-800">
+                 <span>الإجمالي النهائي:</span>
+                 <span>{order.total.toFixed(2)} {settings.currency}</span>
+              </div>
+            </>
+          )}
+
+          {/* Payment Status Box */}
+          <div className={`mt-4 p-4 rounded-xl border text-center font-bold text-sm ${order.paid_amount < order.total ? 'bg-red-50 text-red-600 border-red-200' : 'bg-emerald-50 text-emerald-600 border-emerald-200'}`}>
+             {order.paid_amount < order.total ? (
+               <div className="space-y-1">
+                 <div className="text-lg">متبقي للتحصيل (آجل): {(order.total - order.paid_amount).toFixed(2)} {settings.currency}</div>
+                 <div className="text-xs opacity-70">تم سداد: {order.paid_amount.toFixed(2)} {settings.currency}</div>
+               </div>
+             ) : (
+               <div className="flex items-center justify-center gap-2 text-lg">
+                 <CheckCircle2 size={22} /> ✓ تم سداد الفاتورة بالكامل
+               </div>
+             )}
           </div>
 
-          <div className="space-y-6">
-            <div className="flex justify-between items-center border-b border-slate-100 pb-4">
-              <div className="text-right">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">رقم الفاتورة</span>
-                <span className="text-lg font-black text-slate-800 font-mono tracking-tighter">#{order.id}</span>
-              </div>
-              <div className="text-left">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">التاريخ</span>
-                <span className="text-sm font-bold text-slate-800">{new Date(order.date).toLocaleDateString('ar-SA')}</span>
-              </div>
-            </div>
-
-            {/* Customer Section */}
-            {order.customer && (
-              <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 flex items-center gap-4">
-                <div className="bg-white p-3 rounded-xl shadow-sm text-indigo-600">
-                   <Phone size={20} />
-                </div>
-                <div>
-                   <span className="text-[10px] font-bold text-slate-400 block mb-0.5">العميل</span>
-                   <h3 className="font-black text-slate-800">{order.customer.name}</h3>
-                </div>
-              </div>
-            )}
-
-            {/* Order Items */}
-            <div className="space-y-4">
-               <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                 <ShoppingCart size={14} /> تفاصيل الطلب
-               </h4>
-               <div className="space-y-3">
-                 {order.items.map((item, idx) => (
-                   <div key={idx} className="flex justify-between items-center text-sm border-b border-slate-50 pb-3 last:border-0">
-                      <div className="flex flex-col">
-                        <span className="font-bold text-slate-800">{item.name}</span>
-                        <span className="text-xs text-slate-400">الكمية: {item.quantity} × {item.sale_price.toFixed(2)}</span>
-                      </div>
-                      <span className="font-black text-slate-800">{(item.quantity * item.sale_price).toFixed(2)}</span>
-                   </div>
-                 ))}
-               </div>
-            </div>
-
-            {/* Totals */}
-            <div className="bg-indigo-600 rounded-[32px] p-8 text-white shadow-xl shadow-indigo-100 relative overflow-hidden mt-8" style={{ background: themeColor }}>
-               <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
-               <div className="relative flex justify-between items-center mb-4">
-                 <span className="font-bold opacity-80">الإجمالي</span>
-                 <span className="text-3xl font-black">{order.total.toFixed(2)} <span className="text-xs">{settings?.currency}</span></span>
-               </div>
-               <div className="relative pt-4 border-t border-white/20 flex justify-between items-center text-sm">
-                 <span className="font-bold opacity-80 underline underline-offset-4 decoration-white/30">المبلغ المدفوع</span>
-                 <span className="font-black text-lg">{order.paid_amount.toFixed(2)}</span>
-               </div>
-            </div>
-
-            {/* Store Info */}
-            <div className="pt-8 space-y-4 border-t border-slate-100 text-center">
-               <p className="text-sm font-bold text-slate-500 italic">شكراً لثقتكم بنا، نتمنى رؤيتكم مرة أخرى!</p>
-               <div className="flex flex-wrap justify-center gap-4 text-[10px] font-black text-slate-400">
-                  {settings?.address && <div className="flex items-center gap-1.5"><MapPin size={12} /> {settings.address}</div>}
-                  {settings?.phone && <div className="flex items-center gap-1.5"><Phone size={12} /> {settings.phone}</div>}
-               </div>
-            </div>
+          {/* Payment Breakdown */}
+          <div className="mt-3 p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-1.5">
+             <div className="text-[10px] text-slate-400 font-bold border-b border-slate-200 pb-1 mb-1 text-right">تفاصيل الدفع:</div>
+             {order.paid_cash > 0 && <div className="flex justify-between text-[11px] font-bold"><span>💵 كاش:</span><span>{order.paid_cash.toFixed(2)}</span></div>}
+             {order.paid_visa > 0 && <div className="flex justify-between text-[11px] font-bold"><span>💳 فيزا:</span><span>{order.paid_visa.toFixed(2)}</span></div>}
+             {order.paid_wallet > 0 && <div className="flex justify-between text-[11px] font-bold"><span>📱 محفظة:</span><span>{order.paid_wallet.toFixed(2)}</span></div>}
+             {order.paid_instapay > 0 && <div className="flex justify-between text-[11px] font-bold"><span>⚡ انستا باي:</span><span>{order.paid_instapay.toFixed(2)}</span></div>}
           </div>
         </div>
-        
-        {/* Footer Accent */}
-        <div className="h-2 w-full" style={{ background: themeColor }}></div>
+
+        {/* Footer */}
+        <div className="text-center mt-12 pt-6 border-t border-dashed border-slate-300 text-xs text-slate-400 font-bold italic">
+           شكراً لثقتكم بنا - {settings.name} ترحب بكم دائماً
+        </div>
       </div>
+
+      <style>{`
+        @media print {
+          body { background: white; padding: 0; }
+          .no-print { display: none; }
+          .min-h-screen { background: white; padding: 0; min-height: auto; }
+          #invoice-print-area { box-shadow: none; border: none; padding: 10mm; margin: 0 auto; width: 148mm; height: 210mm; }
+        }
+      `}</style>
     </div>
   );
 }
