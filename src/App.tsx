@@ -1,8 +1,8 @@
-// Vercel Rebuild Trigger: Finance Module Implementation
 import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import POS from './pages/POS';
 import Login from './pages/Login';
+import POSLogin from './pages/POSLogin';
 import AdminLayout from './pages/admin/AdminLayout';
 import Overview from './pages/admin/Overview';
 import Inventory from './pages/admin/Inventory';
@@ -82,6 +82,14 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function ProtectedRoutePOS({ children }: { children: React.ReactNode }) {
+  const { isPOSAuthenticated } = useStore();
+  if (!isPOSAuthenticated) {
+    return <Navigate to="/pos-login" replace />;
+  }
+  return <>{children}</>;
+}
+
 function App() {
   const { loadAll, loadSettingsOnly, isLoading, dbError } = useStore();
 
@@ -125,7 +133,15 @@ function App() {
       <ThemeInjector />
       <Router>
         <Routes>
-          <Route path="/" element={<POS />} />
+          <Route 
+            path="/" 
+            element={
+              <ProtectedRoutePOS>
+                <POS />
+              </ProtectedRoutePOS>
+            } 
+          />
+          <Route path="/pos-login" element={<POSLogin />} />
           <Route path="/login" element={<Login />} />
           <Route 
             path="/admin" 

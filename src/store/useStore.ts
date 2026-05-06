@@ -171,8 +171,11 @@ interface CashierStore {
 
   // Auth
   isAdminAuthenticated: boolean;
+  isPOSAuthenticated: boolean;
   login: (pin: string) => boolean;
   logout: () => void;
+  loginPOS: (pin: string) => boolean;
+  logoutPOS: () => void;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────
@@ -218,9 +221,10 @@ export const useStore = create<CashierStore>((set, get) => ({
   isLoading: false,
   dbError: null,
   isAdminAuthenticated: !!sessionStorage.getItem('cashier_admin_auth'),
+  isPOSAuthenticated: !!sessionStorage.getItem('cashier_pos_auth'),
 
   login: (pin: string) => {
-    if (pin === '1234') {
+    if (pin === '1111') { // Admin PIN
       sessionStorage.setItem('cashier_admin_auth', 'true');
       set({ isAdminAuthenticated: true });
       return true;
@@ -231,6 +235,20 @@ export const useStore = create<CashierStore>((set, get) => ({
   logout: () => {
     sessionStorage.removeItem('cashier_admin_auth');
     set({ isAdminAuthenticated: false });
+  },
+
+  loginPOS: (pin: string) => {
+    if (pin === '123456') { // POS PIN
+      sessionStorage.setItem('cashier_pos_auth', 'true');
+      set({ isPOSAuthenticated: true });
+      return true;
+    }
+    return false;
+  },
+
+  logoutPOS: () => {
+    sessionStorage.removeItem('cashier_pos_auth');
+    set({ isPOSAuthenticated: false });
   },
 
   // ── Load all data from Supabase ────────────────────────────
