@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { Order, StoreSettings } from '../store/useStore';
-import { ShoppingCart, Calendar, MapPin, Phone, CheckCircle2 } from 'lucide-react';
+import type { Order, StoreSettings } from '../store/useStore';
+import { ShoppingCart, MapPin, Phone, CheckCircle2 } from 'lucide-react';
 
 export default function PublicInvoice() {
   const { id } = useParams<{ id: string }>();
