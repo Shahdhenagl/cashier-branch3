@@ -13,6 +13,7 @@ export default function Cashiers() {
     photo_url: ''
   });
   
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -42,9 +43,44 @@ export default function Cashiers() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Basic validation
+      if (file.size > 10 * 1024 * 1024) {
+        alert('حجم الصورة كبير جداً، يرجى اختيار صورة أصغر من 10 ميجابايت');
+        return;
+      }
+
       const reader = new FileReader();
       reader.onloadend = () => {
-        setFormData({ ...formData, photo_url: reader.result as string });
+        const img = new Image();
+        img.src = reader.result as string;
+        img.onload = () => {
+          // Compress image using canvas
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 500;
+          const MAX_HEIGHT = 500;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+          setFormData({ ...formData, photo_url: compressedBase64 });
+        };
       };
       reader.readAsDataURL(file);
     }
@@ -52,13 +88,23 @@ export default function Cashiers() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingCashier) {
-      await updateCashier(editingCashier.id, formData);
-    } else {
-      await addCashier(formData);
+    if (isSubmitting) return;
+    
+    setIsSubmitting(true);
+    try {
+      if (editingCashier) {
+        await updateCashier(editingCashier.id, formData);
+      } else {
+        await addCashier(formData);
+      }
+      setIsModalOpen(false);
+      resetForm();
+    } catch (error) {
+      console.error("Error saving cashier:", error);
+      alert('حدث خطأ أثناء حفظ البيانات، يرجى المحاولة مرة أخرى');
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsModalOpen(false);
-    resetForm();
   };
 
   const handleDelete = async (id: string) => {
@@ -231,10 +277,15 @@ export default function Cashiers() {
                  >إلغاء</button>
                  <button 
                   type="submit" 
+                  disabled={isSubmitting}
                   style={{ backgroundColor: storeSettings.themeColor }}
-                  className="flex-[2] py-4 px-6 bg-indigo-600 text-white rounded-2xl font-black shadow-lg shadow-indigo-200 transition-all active:scale-95 flex items-center justify-center gap-2"
+                  className={`flex-[2] py-4 px-6 bg-indigo-600 text-white rounded-2xl font-black shadow-lg shadow-indigo-200 transition-all active:scale-95 flex items-center justify-center gap-2 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                  >
-                   <Save size={20} /> {editingCashier ? 'حفظ التعديلات' : 'إضافة المحاسب'}
+                   {isSubmitting ? (
+                     <>جارٍ الحفظ...</>
+                   ) : (
+                     <><Save size={20} /> {editingCashier ? 'حفظ التعديلات' : 'إضافة المحاسب'}</>
+                   )}
                  </button>
                </div>
             </form>
