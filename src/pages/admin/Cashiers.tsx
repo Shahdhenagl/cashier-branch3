@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useStore } from '../../store/useStore';
-import { UserPlus, UserCircle, Phone, Lock, Trash2, Edit, Save, X } from 'lucide-react';
+import { UserPlus, UserCircle, Phone, Lock, Trash2, Edit, Save, X, Image as ImageIcon, Upload, Camera } from 'lucide-react';
 
 export default function Cashiers() {
   const { cashiers, loadCashiers, addCashier, updateCashier, deleteCashier, storeSettings } = useStore();
@@ -12,6 +12,8 @@ export default function Cashiers() {
     phone: '',
     photo_url: ''
   });
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadCashiers();
@@ -35,6 +37,17 @@ export default function Cashiers() {
       resetForm();
     }
     setIsModalOpen(true);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData({ ...formData, photo_url: reader.result as string });
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -143,6 +156,34 @@ export default function Cashiers() {
 
             <form onSubmit={handleSubmit} className="p-8 space-y-6">
                <div className="space-y-4">
+                  {/* Photo Upload Section */}
+                  <div className="flex flex-col items-center gap-4 mb-6">
+                    <div className="relative group">
+                      <div className="w-32 h-32 rounded-3xl bg-slate-100 dark:bg-slate-900 border-4 border-slate-50 dark:border-slate-800 shadow-inner flex items-center justify-center overflow-hidden">
+                        {formData.photo_url ? (
+                          <img src={formData.photo_url} alt="Preview" className="w-full h-full object-cover" />
+                        ) : (
+                          <ImageIcon size={48} className="text-slate-300" />
+                        )}
+                      </div>
+                      <button 
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="absolute -bottom-2 -right-2 bg-indigo-600 text-white p-3 rounded-2xl shadow-lg hover:scale-110 transition-transform active:scale-95"
+                      >
+                        <Camera size={20} />
+                      </button>
+                    </div>
+                    <input 
+                      type="file" 
+                      ref={fileInputRef}
+                      onChange={handleFileChange}
+                      accept="image/*"
+                      className="hidden"
+                    />
+                    <p className="text-xs font-bold text-slate-400">اضغط لرفع صورة المحاسب</p>
+                  </div>
+
                   <div className="space-y-1.5">
                     <label className="text-xs font-black text-slate-400 uppercase tracking-widest mr-1">الاسم بالكامل</label>
                     <input 
@@ -180,19 +221,6 @@ export default function Cashiers() {
                       />
                     </div>
                   </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest mr-1">رابط الصورة (اختياري)</label>
-                    <div className="flex gap-2">
-                      <input 
-                        type="text" 
-                        value={formData.photo_url}
-                        onChange={(e) => setFormData({...formData, photo_url: e.target.value})}
-                        placeholder="https://..."
-                        className="flex-1 bg-slate-50 dark:bg-slate-900 border-2 border-transparent focus:border-indigo-500 py-3.5 px-5 rounded-2xl focus:outline-none transition-all font-bold"
-                      />
-                    </div>
-                  </div>
                </div>
 
                <div className="flex gap-4 pt-6">
@@ -216,3 +244,4 @@ export default function Cashiers() {
     </div>
   );
 }
+
