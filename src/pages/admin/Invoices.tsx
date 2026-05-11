@@ -66,22 +66,18 @@ export default function Invoices() {
 
     const customerBlock = order.customer
       ? `<div class="customer-info-grid">
-          <div style="grid-column: span 2; display:grid; grid-template-columns: 1fr 1fr; gap: 8px;">
             <div class="info-item"><strong>اسم العميل:</strong> <span>${order.customer.name}</span></div>
-            <div class="info-item"><strong>رقم الكارت (ID):</strong> <span dir="ltr">${order.customer.custom_id || order.customer.id.substring(0, 8)}</span></div>
             <div class="info-item"><strong>رقم الهاتف:</strong> <span dir="ltr">${order.customer.phone}</span></div>
+            <div class="info-item"><strong>رقم الكارت (ID):</strong> <span dir="ltr">${order.customer.custom_id || order.customer.id.substring(0, 8)}</span></div>
             <div class="info-item"><strong>رقم الفاتورة:</strong> <span>#${order.id}</span></div>
+            <div class="info-item"><strong>المسؤول:</strong> <span>${order.cashier_name || '—'}</span></div>
             <div class="info-item"><strong>التاريخ:</strong> <span>${printDate}</span></div>
-          </div>
-          <img class="qr-code-img" src="${qrCodeUrl}" alt="QR Code" />
          </div>`
-      : `<div class="customer-info-grid" style="grid-template-columns: 1fr auto;">
-          <div style="display:grid; grid-template-columns: 1fr; gap: 4px;">
+      : `<div class="customer-info-grid">
             <div class="info-item"><strong>اسم العميل:</strong> <span>عميل نقدي</span></div>
             <div class="info-item"><strong>رقم الفاتورة:</strong> <span>#${order.id}</span></div>
+            <div class="info-item"><strong>المسؤول:</strong> <span>${order.cashier_name || '—'}</span></div>
             <div class="info-item"><strong>التاريخ:</strong> <span>${printDate}</span></div>
-          </div>
-          <img class="qr-code-img" src="${qrCodeUrl}" alt="QR Code" />
          </div>`;
 
     const html = `<!DOCTYPE html>
@@ -103,12 +99,14 @@ export default function Invoices() {
     
     .invoice-title-badge{background:#1e293b;color:#fff;padding:6px 15px;border-radius:6px;font-weight:900;font-size:16px;}
     
-    .customer-info-grid{display:grid;grid-template-columns:1fr auto;gap:8px;margin-bottom:10px;background:#f8fafc;padding:10px;border-radius:10px;border:1px solid #e2e8f0;align-items:center;}
+    .customer-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;background:#f8fafc;padding:10px;border-radius:10px;border:1px solid #e2e8f0;}
     .info-item{font-size:12px;display:flex;gap:6px;}
     .info-item strong{color:#64748b;white-space:nowrap;}
     .info-item span{color:#1e293b;font-weight:700;}
     
-    .qr-code-img{width:65px;height:65px;padding:4px;background:#fff;border-radius:6px;border:1px solid #e2e8f0;}
+    .qr-code-container{position:absolute;bottom:65px;right:25px;display:flex;flex-direction:column;align-items:center;gap:3px;}
+    .qr-code-img{width:80px;height:80px;padding:3px;background:#fff;border-radius:6px;border:1px solid #e2e8f0;box-shadow: 0 1px 3px rgba(0,0,0,0.1);}
+    .qr-label{font-size:9px;font-weight:bold;color:#1e293b;text-align:center;margin-top:2px;}
 
     table{width:100%;border-collapse:collapse;margin-bottom:10px;}
     thead th{background:#f1f5f9;color:#475569;font-size:12px;padding:8px 6px;text-align:center;border-bottom:2px solid #cbd5e1;}
