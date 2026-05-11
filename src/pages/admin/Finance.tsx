@@ -264,25 +264,25 @@ export default function Finance() {
     const inv = t.original;
     const isOrder = t.originType === 'order';
     
-    // Simple helper to generate formatted invoice from Finance
+    // Professional HTML template for printing from Finance
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(`https://cashier-branch3.vercel.app/view-invoice/${inv.id}`)}`;
 
     const html = `<!DOCTYPE html>
 <html dir="rtl" lang="ar">
 <head>
 <meta charset="UTF-8"/>
-<title>${isOrder ? 'فاتورة مبيعات' : 'فاتورة مشتريات'} #${isOrder ? inv.id : inv.invoice_number}</title>
+<title>Print Invoice</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
   *{margin:0;padding:0;box-sizing:border-box;font-family:'Cairo', sans-serif;}
-  body{background:#fff;color:#1e293b;padding:15px;}
-  .invoice-card{width:148mm;margin:0 auto;border:1px solid #eee;padding:15px;border-radius:15px;position:relative;}
+  body{background:#fff;color:#1e293b;padding:10mm;}
+  .invoice-card{width:128mm;margin:0 auto;position:relative;min-height:190mm;display:flex;flex-direction:column;}
   .header{display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #1e293b;padding-bottom:10px;margin-bottom:15px;}
   .store-info{font-size:12px;color:#64748b;}
   .store-name{font-size:22px;font-weight:900;color:#1e293b;}
-  .badge{background:#1e293b;color:#fff;padding:5px 15px;border-radius:6px;font-weight:900;font-size:14px;}
+  .badge{background:#1e293b;color:#fff;padding:5px 15px;border-radius:6px;font-weight:900;font-size:14px;white-space:nowrap;}
   
-  .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:15px;background:#f8fafc;padding:10px;border-radius:10px;}
+  .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:15px;background:#f8fafc;padding:10px;border-radius:10px;border:1px solid #e2e8f0;}
   .info-item{font-size:11px;}
   .info-item strong{color:#64748b;}
   
@@ -290,15 +290,15 @@ export default function Finance() {
   th{background:#f1f5f9;padding:8px;font-size:11px;text-align:center;border-bottom:2px solid #cbd5e1;}
   td{padding:8px;font-size:11px;border-bottom:1px solid #f1f5f9;text-align:center;}
   
-  .summary{margin-right:auto;width:60%;}
-  .sum-row{display:flex;justify-content:space-between;padding:5px 0;font-size:12px;}
-  .sum-total{font-weight:900;font-size:16px;border-top:2px solid #1e293b;padding-top:5px;margin-top:5px;}
+  .summary{margin-right:auto;width:100%;max-width:250px;margin-top:auto;}
+  .sum-row{display:flex;justify-content:space-between;padding:5px 0;font-size:12px;border-bottom:1px solid #f1f5f9;}
+  .sum-total{font-weight:900;font-size:18px;border-top:2px solid #1e293b;padding-top:5px;margin-top:5px;border-bottom:none;}
   
-  .footer-container{display:flex;justify-content:space-between;align-items:flex-end;margin-top:20px;padding-top:10px;border-top:1px dashed #eee;}
-  .footer-text{font-size:10px;color:#94a3b8;text-align:center;flex:1;}
-  .qr-code{width:70px;height:70px;border:1px solid #f1f5f9;padding:5px;border-radius:8px;}
-
-  @media print{ @page{size:A5;margin:0;} body{padding:0;} .invoice-card{border:none;width:100%;} }
+  .footer-area{margin-top:20px;border-top:1px dashed #cbd5e1;padding-top:10px;display:flex;justify-content:space-between;align-items:flex-end;}
+  .qr-box{text-align:center;}
+  .qr-box img{width:80px;height:80px;border:1px solid #eee;padding:5px;border-radius:8px;background:white;}
+  
+  @media print{ @page{size:A5;margin:0;} body{padding:5mm;} .invoice-card{border:none;width:100%;} }
 </style>
 </head>
 <body>
@@ -318,25 +318,18 @@ export default function Finance() {
     <div class="info-item"><strong>المسؤول:</strong> <span>${isOrder ? (inv.cashier_name || '—') : 'المدير'}</span></div>
   </div>
 
-  <table>
-    <thead>
-      <tr>
-        <th>المنتج</th>
-        <th>الكمية</th>
-        <th>السعر</th>
-        <th>الإجمالي</th>
-      </tr>
-    </thead>
+  <table style="flex-grow: 1;">
+    <thead><tr><th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead>
     <tbody>
-      ${(inv.items || []).map((item: any) => `
+      ${(inv.items || inv.purchase_items || []).map((item: any) => `
         <tr>
-          <td style="text-align:right">${item.product_name || useStore.getState().products.find(p => p.id === item.product_id)?.name || 'منتج'}</td>
+          <td style="text-align:right">${item.product_name || item.products?.name || useStore.getState().products.find(p => p.id === item.product_id)?.name || 'منتج'}</td>
           <td>${item.quantity}</td>
           <td>${(isOrder ? item.sale_price : item.purchase_price).toFixed(2)}</td>
           <td>${((isOrder ? item.sale_price : item.purchase_price) * item.quantity).toFixed(2)}</td>
         </tr>
       `).join('')}
-      ${inv.total === 0 ? '<tr><td colspan="4" style="padding:20px; color:#059669; font-weight:bold;">عملية سداد مديونية للمورد</td></tr>' : ''}
+      ${inv.total === 0 ? '<tr><td colspan="4" style="padding:40px; color:#059669; font-weight:black; font-size:16px;">إيصال سداد مديونية للمورد</td></tr>' : ''}
     </tbody>
   </table>
 
@@ -346,18 +339,30 @@ export default function Finance() {
     ${inv.total - inv.paid_amount > 0 ? `<div class="sum-row" style="color:#ef4444; font-weight:bold;"><span>المتبقي:</span><span>${(inv.total - inv.paid_amount).toFixed(2)} ${storeSettings.currency}</span></div>` : ''}
   </div>
 
-  <div class="footer-container">
-    <div class="footer-text">نظام الكاشير المتقدم - سجل المالية</div>
-    <img class="qr-code" src="${qrCodeUrl}" />
+  <div class="footer-area">
+    <div style="font-size:10px; color:#94a3b8;">${storeSettings.name} - إدارة المالية</div>
+    <div class="qr-box">
+      <img src="${qrCodeUrl}" />
+      <div style="font-size:9px; font-weight:bold; color:#1e293b; margin-top:4px;">تفاصيل الفاتورة</div>
+    </div>
   </div>
 </div>
-<script>window.onload=()=>{setTimeout(()=>{window.print();window.onafterprint=()=>window.close();},500);}<\/script>
+<script>window.onload=()=>{setTimeout(()=>{window.print();},500);}<\/script>
 </body>
 </html>`;
 
-    const pw = window.open('', '_blank');
-    pw?.document.write(html);
-    pw?.document.close();
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+    const doc = iframe.contentWindow?.document || iframe.contentDocument;
+    if (doc) {
+      doc.open();
+      doc.write(html);
+      doc.close();
+      setTimeout(() => {
+        document.body.removeChild(iframe);
+      }, 2000);
+    }
   };
 
   const exportToPDF = async () => {
