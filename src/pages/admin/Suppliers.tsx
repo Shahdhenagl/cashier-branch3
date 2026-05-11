@@ -15,7 +15,6 @@ export default function Suppliers() {
   const [showSupplierProfile, setShowSupplierProfile] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isPayingDebt, setIsPayingDebt] = useState(false);
-  const [debtAmount, setDebtAmount] = useState('');
   const [debtPaidCash, setDebtPaidCash] = useState('');
   const [debtPaidVisa, setDebtPaidVisa] = useState('');
   const [debtPaidWallet, setDebtPaidWallet] = useState('');
