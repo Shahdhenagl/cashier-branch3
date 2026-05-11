@@ -15,69 +15,8 @@ export default function PublicInvoice() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const [orderRes, settingsRes] = await Promise.all([
-          supabase.from('orders').select('*, customers(*), order_items(*, products(*))').eq('id', id).maybeSingle(),
-          supabase.from('store_settings').select('*').maybeSingle()
-        ]);
-
-        if (orderRes.error) throw orderRes.error;
-        if (!orderRes.data) throw new Error('Invoice not found');
-
-        const o = orderRes.data;
-        const itemRows = (o.order_items as any[]) ?? [];
-        const items = itemRows.map((i: any) => ({
-          id: i.product_id,
-          name: i.product_name || i.products?.name || 'منتج غير معروف',
-          quantity: i.quantity,
-          sale_price: i.sale_price,
-          returned_quantity: i.returned_quantity || 0,
-        }));
-
-        // Calculate Debt info for this specific point in time
-        let debtBefore = 0;
-        let debtAfter = 0;
-        if (o.customer_id) {
-          const { data: allCustOrders } = await supabase
-            .from('orders')
-            .select('id, total, paid_amount, type, created_at')
-            .eq('customer_id', o.customer_id)
-            .lte('created_at', o.created_at);
-          
-          if (allCustOrders) {
-            debtBefore = allCustOrders.reduce((sum, ord) => {
-              if (ord.id === o.id) return sum;
-              if (ord.type === 'payment') return sum - ord.paid_amount;
-              if (ord.type === 'return') return sum;
-              return sum + (ord.total - ord.paid_amount);
-            }, 0);
-            debtAfter = o.type === 'payment' ? debtBefore - o.paid_amount : debtBefore + (o.total - o.paid_amount);
-          }
-        }
-
-        setOrder({
-          id: o.id,
-          total: o.total,
-          paid_amount: o.paid_amount,
-          paid_cash: o.paid_cash,
-          paid_visa: o.paid_visa,
-          paid_wallet: o.paid_wallet,
-          paid_instapay: o.paid_instapay,
-          type: o.type,
-          payment_method: o.payment_method,
-          date: o.created_at,
-          items,
-          cashier_name: o.cashier_name,
-          debtBefore,
-          debtAfter,
-          customer: o.customers ? { 
-            id: o.customers.id, 
-            name: o.customers.name, 
-            phone: o.customers.phone, 
-            custom_id: o.customers.custom_id,
-            timestamp: o.customers.created_at 
-          } : undefined
-        } as any);
-
+        setLoading(true);
+        const settingsRes = await supabase.from('store_settings').select('*').maybeSingle();
         if (settingsRes.data) {
           const s = settingsRes.data;
           setSettings({
@@ -93,6 +32,110 @@ export default function PublicInvoice() {
             initial_balance: s.initial_balance
           });
         }
+
+        // Try Orders first
+        const { data: o, error: oErr } = await supabase
+          .from('orders')
+          .select('*, customers(*), order_items(*, products(*))')
+          .eq('id', id)
+          .maybeSingle();
+
+        if (o) {
+          const itemRows = (o.order_items as any[]) ?? [];
+          const items = itemRows.map((i: any) => ({
+            id: i.product_id,
+            name: i.product_name || i.products?.name || 'منتج غير معروف',
+            quantity: i.quantity,
+            sale_price: i.sale_price,
+            returned_quantity: i.returned_quantity || 0,
+          }));
+
+          let debtBefore = 0;
+          let debtAfter = 0;
+          if (o.customer_id) {
+            const { data: allCustOrders } = await supabase
+              .from('orders')
+              .select('id, total, paid_amount, type, created_at')
+              .eq('customer_id', o.customer_id)
+              .lte('created_at', o.created_at);
+            
+            if (allCustOrders) {
+              debtBefore = allCustOrders.reduce((sum, ord) => {
+                if (ord.id === o.id) return sum;
+                if (ord.type === 'payment') return sum - ord.paid_amount;
+                if (ord.type === 'return') return sum;
+                return sum + (ord.total - ord.paid_amount);
+              }, 0);
+              debtAfter = o.type === 'payment' ? debtBefore - o.paid_amount : debtBefore + (o.total - o.paid_amount);
+            }
+          }
+
+          setOrder({
+            id: o.id,
+            total: o.total,
+            paid_amount: o.paid_amount,
+            paid_cash: o.paid_cash,
+            paid_visa: o.paid_visa,
+            paid_wallet: o.paid_wallet,
+            paid_instapay: o.paid_instapay,
+            type: o.type,
+            payment_method: o.payment_method,
+            date: o.created_at,
+            items,
+            cashier_name: o.cashier_name,
+            debtBefore,
+            debtAfter,
+            originType: 'sale',
+            customer: o.customers ? { 
+              id: o.customers.id, 
+              name: o.customers.name, 
+              phone: o.customers.phone, 
+              custom_id: o.customers.custom_id,
+              timestamp: o.customers.created_at 
+            } : undefined
+          } as any);
+          return;
+        }
+
+        // Try Purchase Invoices if not found in orders
+        const { data: inv, error: invErr } = await supabase
+          .from('purchase_invoices')
+          .select('*, suppliers(*), purchase_invoice_items(*, products(*))')
+          .eq('id', id)
+          .maybeSingle();
+
+        if (inv) {
+          const itemRows = (inv.purchase_invoice_items as any[]) ?? [];
+          const items = itemRows.map((i: any) => ({
+            id: i.product_id,
+            name: i.products?.name || 'منتج غير معروف',
+            quantity: i.quantity,
+            sale_price: i.purchase_price,
+            returned_quantity: 0
+          }));
+
+          setOrder({
+            id: inv.invoice_number || inv.id,
+            total: inv.total,
+            paid_amount: inv.paid_amount,
+            paid_cash: inv.paid_cash,
+            paid_visa: inv.paid_visa,
+            paid_wallet: inv.paid_wallet,
+            paid_instapay: inv.paid_instapay,
+            type: inv.total === 0 ? 'payment' : 'sale',
+            payment_method: inv.payment_method,
+            date: inv.created_at,
+            items,
+            originType: 'purchase',
+            supplier: inv.suppliers ? {
+              name: inv.suppliers.name,
+              phone: inv.suppliers.phone
+            } : undefined
+          } as any);
+          return;
+        }
+
+        throw new Error('Invoice not found');
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -178,7 +221,7 @@ export default function PublicInvoice() {
             </div>
             <div className="flex flex-col items-center sm:items-end gap-2">
               <div className="bg-slate-800 text-white px-6 py-2.5 rounded-xl font-black text-lg shadow-lg">
-                {isPayment ? 'إيصال سداد' : 'فاتورة بيع'}
+                {isPayment ? 'إيصال سداد' : ((order as any).originType === 'purchase' ? 'فاتورة مشتريات' : 'فاتورة بيع')}
               </div>
               <div className="text-slate-400 font-mono text-sm font-bold">#{order.id}</div>
               {order.cashier_name && (
@@ -193,10 +236,14 @@ export default function PublicInvoice() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col gap-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider">العميل</span>
+                  <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider">
+                    {(order as any).originType === 'purchase' ? 'المورد' : 'العميل'}
+                  </span>
                   <CheckCircle2 size={14} className="text-emerald-500" />
                 </div>
-                <div className="text-sm font-black text-slate-800">{order.customer?.name || 'عميل نقدي'}</div>
+                <div className="text-sm font-black text-slate-800">
+                  {(order as any).originType === 'purchase' ? ((order as any).supplier?.name || 'مورد') : (order.customer?.name || 'عميل نقدي')}
+                </div>
                 <div className="text-xs font-bold text-slate-500 font-mono" dir="ltr">{order.customer?.phone || '-'}</div>
              </div>
              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col gap-2">
