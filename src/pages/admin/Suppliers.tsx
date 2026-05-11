@@ -316,12 +316,14 @@ export default function Suppliers() {
     </div>
   </div>
 
-    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 15px; border-top: 1px dashed #cbd5e1; padding-top: 15px;">
-      <div style="flex: 1;">
-        <div style="font-size: 10px; color: #94a3b8; margin-bottom: 5px;">${storeSettings.name} - إدارة الموردين</div>
-        <div style="font-size: 10px; color: #94a3b8;">رقم المستند: #${inv.invoice_number}</div>
+    <div style="margin-top: 20px; display: flex; justify-content: space-between; align-items: flex-end;">
+      <div style="font-size: 10px; color: #94a3b8; flex: 1; border-top: 1px dashed #cbd5e1; padding-top: 10px; margin-left: 20px;">
+        ${storeSettings.name} - إدارة الموردين والمشتريات
       </div>
-      <img class="qr-code" src="${qrCodeUrl}" style="width: 70px; height: 70px; margin-right: 15px;" />
+      <div style="text-align: center;">
+        <img src="${qrCodeUrl}" style="width: 85px; height: 85px; border: 1px solid #eee; padding: 5px; border-radius: 8px;" />
+        <div style="font-size: 10px; font-weight: bold; color: #1e293b; margin-top: 5px;">تفاصيل الفاتورة</div>
+      </div>
     </div>
   </div>
 </div>
