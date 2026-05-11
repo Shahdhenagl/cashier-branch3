@@ -341,7 +341,13 @@ export const useStore = create<CashierStore>((set, get) => ({
           items,
           cashier_name: (o.cashier_name as string) ?? undefined,
           customer: custRow
-            ? { id: custRow.id as string, name: custRow.name as string, phone: custRow.phone as string, timestamp: custRow.created_at as string }
+            ? { 
+                id: custRow.id as string, 
+                name: custRow.name as string, 
+                phone: custRow.phone as string, 
+                custom_id: custRow.custom_id as string,
+                timestamp: custRow.created_at as string 
+              }
             : undefined,
         };
       });
