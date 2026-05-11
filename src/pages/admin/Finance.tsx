@@ -336,7 +336,16 @@ export default function Finance() {
   <div class="summary">
     <div class="sum-row sum-total"><span>الإجمالي:</span><span>${inv.total.toFixed(2)} ${storeSettings.currency}</span></div>
     <div class="sum-row" style="color:#059669; font-weight:bold;"><span>المدفوع:</span><span>${inv.paid_amount.toFixed(2)} ${storeSettings.currency}</span></div>
-    ${inv.total - inv.paid_amount > 0 ? `<div class="sum-row" style="color:#ef4444; font-weight:bold;"><span>المتبقي:</span><span>${(inv.total - inv.paid_amount).toFixed(2)} ${storeSettings.currency}</span></div>` : ''}
+    
+    <!-- Payment Methods Breakdown -->
+    <div style="margin-top:5px; padding:5px; background:#f8fafc; border-radius:6px; border:1px solid #e2e8f0;">
+      ${inv.paid_cash > 0 ? `<div class="sum-row" style="font-size:10px; border:none; padding:1px 0;"><span>💵 كاش:</span><span>${inv.paid_cash.toFixed(2)}</span></div>` : ''}
+      ${inv.paid_visa > 0 ? `<div class="sum-row" style="font-size:10px; border:none; padding:1px 0;"><span>💳 فيزا:</span><span>${inv.paid_visa.toFixed(2)}</span></div>` : ''}
+      ${inv.paid_wallet > 0 ? `<div class="sum-row" style="font-size:10px; border:none; padding:1px 0;"><span>📱 محفظة:</span><span>${inv.paid_wallet.toFixed(2)}</span></div>` : ''}
+      ${inv.paid_instapay > 0 ? `<div class="sum-row" style="font-size:10px; border:none; padding:1px 0;"><span>⚡ انستا:</span><span>${inv.paid_instapay.toFixed(2)}</span></div>` : ''}
+    </div>
+
+    ${inv.total - inv.paid_amount > 0 ? `<div class="sum-row" style="color:#ef4444; font-weight:bold; margin-top:5px;"><span>المتبقي:</span><span>${(inv.total - inv.paid_amount).toFixed(2)} ${storeSettings.currency}</span></div>` : ''}
   </div>
 
   <div class="footer-area">
