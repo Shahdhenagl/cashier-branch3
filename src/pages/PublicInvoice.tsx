@@ -33,6 +33,27 @@ export default function PublicInvoice() {
           returned_quantity: i.returned_quantity || 0,
         }));
 
+        // Calculate Debt info for this specific point in time
+        let debtBefore = 0;
+        let debtAfter = 0;
+        if (o.customer_id) {
+          const { data: allCustOrders } = await supabase
+            .from('orders')
+            .select('id, total, paid_amount, type, created_at')
+            .eq('customer_id', o.customer_id)
+            .lte('created_at', o.created_at);
+          
+          if (allCustOrders) {
+            debtBefore = allCustOrders.reduce((sum, ord) => {
+              if (ord.id === o.id) return sum;
+              if (ord.type === 'payment') return sum - ord.paid_amount;
+              if (ord.type === 'return') return sum;
+              return sum + (ord.total - ord.paid_amount);
+            }, 0);
+            debtAfter = o.type === 'payment' ? debtBefore - o.paid_amount : debtBefore + (o.total - o.paid_amount);
+          }
+        }
+
         setOrder({
           id: o.id,
           total: o.total,
@@ -46,6 +67,8 @@ export default function PublicInvoice() {
           date: o.created_at,
           items,
           cashier_name: o.cashier_name,
+          debtBefore,
+          debtAfter,
           customer: o.customers ? { 
             id: o.customers.id, 
             name: o.customers.name, 
@@ -253,9 +276,21 @@ export default function PublicInvoice() {
                 </>
               )}
 
-              {/* Payment Status */}
-              <div className={`p-3 rounded-xl border text-center font-black text-sm ${order.paid_amount < order.total ? 'bg-red-50 text-red-600 border-red-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
-                {order.paid_amount < order.total ? (
+              {/* Payment Status / Debt info */}
+              <div className={`p-4 rounded-xl border text-center font-black ${order.type === 'payment' ? 'bg-indigo-50 border-indigo-100' : (order.paid_amount < order.total ? 'bg-red-50 text-red-600 border-red-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100')}`}>
+                {isPayment ? (
+                  <div className="space-y-3">
+                    <div className="text-indigo-600 text-lg border-b border-indigo-100 pb-2">المبلغ المدفوع: {order.paid_amount.toFixed(2)} {settings.currency}</div>
+                    <div className="flex justify-between items-center text-xs text-slate-500">
+                      <span>المديونية قبل السداد:</span>
+                      <span className="font-bold">{((order as any).debtBefore || 0).toFixed(2)} {settings.currency}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm text-orange-700 bg-white p-2 rounded-lg border border-orange-100 shadow-sm">
+                      <span>المديونية المتبقية:</span>
+                      <span className="text-lg font-black">{Math.max(0, (order as any).debtAfter || 0).toFixed(2)} {settings.currency}</span>
+                    </div>
+                  </div>
+                ) : order.paid_amount < order.total ? (
                   <div className="flex flex-col gap-1">
                     <div className="text-base">متبقي آجل: {(order.total - order.paid_amount).toFixed(2)} {settings.currency}</div>
                     <div className="text-[10px] opacity-70">تم سداد: {order.paid_amount.toFixed(2)} {settings.currency}</div>
