@@ -112,147 +112,168 @@ export default function PublicInvoice() {
   const isPayment = order.type === 'payment';
 
   return (
-    <div className="min-h-screen bg-slate-100 py-10 px-4 font-sans flex flex-col items-center gap-6" dir="rtl">
+    <div className="min-h-screen bg-slate-50 py-4 sm:py-10 px-2 sm:px-4 font-sans flex flex-col items-center gap-4 sm:gap-6" dir="rtl">
       
       {/* Action Buttons */}
-      <div className="flex gap-4 no-print">
-         <button onClick={() => window.print()} className="flex items-center gap-2 bg-slate-800 text-white px-6 py-3 rounded-2xl font-bold shadow-lg hover:bg-slate-900 transition">
-            <Printer size={20} /> طباعة
+      <div className="flex gap-3 no-print w-full max-w-2xl justify-center">
+         <button onClick={() => window.print()} className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-slate-800 text-white px-4 sm:px-6 py-3 rounded-xl font-bold shadow-md hover:bg-slate-900 transition text-sm">
+            <Printer size={18} /> طباعة
          </button>
-         <button onClick={downloadAsImage} className="flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-2xl font-bold shadow-lg hover:bg-indigo-700 transition">
-            <Download size={20} /> حفظ كصورة
+         <button onClick={downloadAsImage} className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-indigo-600 text-white px-4 sm:px-6 py-3 rounded-xl font-bold shadow-md hover:bg-indigo-700 transition text-sm">
+            <Download size={18} /> حفظ كصورة
          </button>
       </div>
 
-      {/* Invoice Area - Styled to match A5 Print */}
-      <div id="invoice-print-area" className="bg-white w-full max-w-[148mm] min-h-[210mm] shadow-2xl p-[12mm] flex flex-col relative border border-gray-200 rounded-sm">
+      {/* Invoice Area */}
+      <div id="invoice-print-area" className="bg-white w-full max-w-2xl shadow-xl sm:shadow-2xl rounded-2xl sm:rounded-none overflow-hidden flex flex-col relative border border-slate-200 sm:border-none">
         
-        {/* Header */}
-        <div className="flex justify-between items-center border-b-4 border-slate-800 pb-4 mb-6">
-          <div className="flex items-center gap-4">
-            {settings.logo && <img src={settings.logo} alt="Logo" className="w-16 h-16 object-contain rounded-xl" />}
-            <div>
-              <h1 className="text-2xl font-black text-slate-800 leading-none">{settings.name}</h1>
-              <div className="text-[11px] text-slate-500 mt-1.5 leading-relaxed">
-                {settings.address && <span>📍 {settings.address}<br/></span>}
-                {settings.phone && <span>📞 {settings.phone}</span>}
-                {settings.phone2 && <span> | {settings.phone2}</span>}
+        {/* Decorative Top Bar (no-print) */}
+        <div className="h-2 w-full bg-slate-800 no-print"></div>
+
+        <div className="p-5 sm:p-[12mm] flex flex-col h-full">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row justify-between items-center sm:items-start border-b-2 border-slate-100 pb-6 mb-6 gap-4">
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 text-center sm:text-right">
+              {settings.logo && (
+                <div className="bg-slate-50 p-2 rounded-2xl border border-slate-100 shadow-sm">
+                  <img src={settings.logo} alt="Logo" className="w-20 h-20 object-contain" />
+                </div>
+              )}
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-black text-slate-800 leading-tight">{settings.name}</h1>
+                <div className="text-xs sm:text-sm text-slate-500 mt-2 space-y-1 font-medium">
+                  {settings.address && <p className="flex items-center justify-center sm:justify-start gap-1">📍 {settings.address}</p>}
+                  {(settings.phone || settings.phone2) && (
+                    <p className="flex items-center justify-center sm:justify-start gap-1" dir="ltr">
+                      {settings.phone2 && <span>{settings.phone2} | </span>}
+                      {settings.phone} 📞
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-col items-center sm:items-end gap-2">
+              <div className="bg-slate-800 text-white px-6 py-2.5 rounded-xl font-black text-lg shadow-lg">
+                {isPayment ? 'إيصال سداد' : 'فاتورة بيع'}
+              </div>
+              <div className="text-slate-400 font-mono text-sm font-bold">#{order.id}</div>
+            </div>
+          </div>
+
+          {/* Info Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+             <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col gap-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider">العميل</span>
+                  <CheckCircle2 size={14} className="text-emerald-500" />
+                </div>
+                <div className="text-sm font-black text-slate-800">{order.customer?.name || 'عميل نقدي'}</div>
+                <div className="text-xs font-bold text-slate-500 font-mono" dir="ltr">{order.customer?.phone || '-'}</div>
+             </div>
+             <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col gap-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider">التفاصيل</span>
+                  <span className="text-[10px] text-slate-400 font-mono">{new Date(order.date).toLocaleDateString('ar-SA')}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs font-bold text-slate-600">التوقيت:</span>
+                  <span className="text-xs font-black text-slate-800">{new Date(order.date).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+                {order.customer?.custom_id && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-bold text-slate-600">رقم الكارت:</span>
+                    <span className="text-xs font-black text-indigo-600 font-mono">{order.customer.custom_id}</span>
+                  </div>
+                )}
+             </div>
+          </div>
+
+          {/* Items Table */}
+          <div className="overflow-x-auto -mx-5 sm:mx-0 mb-6">
+            <table className="w-full text-sm border-separate border-spacing-0">
+              <thead>
+                <tr className="bg-slate-50">
+                  <th className="p-4 text-center text-[11px] font-black text-slate-400 border-b border-slate-100 w-10">#</th>
+                  <th className="p-4 text-right text-[11px] font-black text-slate-400 border-b border-slate-100">{isPayment ? 'البيان' : 'المنتج'}</th>
+                  {!isPayment && <th className="p-4 text-center text-[11px] font-black text-slate-400 border-b border-slate-100 w-16">الكمية</th>}
+                  <th className="p-4 text-center text-[11px] font-black text-slate-400 border-b border-slate-100 w-24">السعر</th>
+                  <th className="p-4 text-left text-[11px] font-black text-slate-400 border-b border-slate-100 w-28">الإجمالي</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {order.items.map((item, idx) => (
+                  <tr key={idx} className="group">
+                    <td className="p-4 text-center text-slate-400 font-bold text-xs">{idx + 1}</td>
+                    <td className="p-4 font-black text-slate-800 text-sm">{item.name}</td>
+                    {!isPayment && <td className="p-4 text-center font-black text-slate-800">{item.quantity}</td>}
+                    <td className="p-4 text-center font-bold text-slate-600 text-xs">{item.sale_price.toFixed(2)}</td>
+                    <td className="p-4 text-left font-black text-slate-900 text-sm">{ (item.quantity * item.sale_price).toFixed(2) }</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Summary Section */}
+          <div className="mr-auto w-full sm:w-3/5 mt-auto space-y-4">
+            <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100 space-y-3">
+              {!isPayment && (
+                <>
+                  <div className="flex justify-between text-xs font-bold">
+                    <span className="text-slate-500">المجموع الفرعي</span>
+                    <span className="text-slate-800">{subtotal.toFixed(2)} {settings.currency}</span>
+                  </div>
+                  {calculatedDiscount > 0.5 && (
+                    <div className="flex justify-between text-xs font-bold text-red-500">
+                      <span>🏷️ الخصم</span>
+                      <span>- {calculatedDiscount.toFixed(2)} {settings.currency}</span>
+                    </div>
+                  )}
+                  {taxRate > 0 && (
+                    <div className="flex justify-between text-xs font-bold">
+                      <span className="text-slate-500">الضريبة ({taxRate}%)</span>
+                      <span className="text-slate-800">{taxValue.toFixed(2)} {settings.currency}</span>
+                    </div>
+                  )}
+                  <div className="h-px bg-slate-200 my-1"></div>
+                  <div className="flex justify-between items-center text-xl font-black text-slate-800">
+                    <span>الإجمالي</span>
+                    <span className="text-2xl">{order.total.toFixed(2)} {settings.currency}</span>
+                  </div>
+                </>
+              )}
+
+              {/* Payment Status */}
+              <div className={`p-3 rounded-xl border text-center font-black text-sm ${order.paid_amount < order.total ? 'bg-red-50 text-red-600 border-red-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
+                {order.paid_amount < order.total ? (
+                  <div className="flex flex-col gap-1">
+                    <div className="text-base">متبقي آجل: {(order.total - order.paid_amount).toFixed(2)} {settings.currency}</div>
+                    <div className="text-[10px] opacity-70">تم سداد: {order.paid_amount.toFixed(2)} {settings.currency}</div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center gap-2">
+                    <CheckCircle2 size={18} /> تم السداد بالكامل
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Payment Details Card */}
+            <div className="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm space-y-2">
+              <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center border-b border-slate-50 pb-2 mb-2">طريقة الدفع</div>
+              <div className="grid grid-cols-2 gap-2">
+                {order.paid_cash > 0 && <div className="flex justify-between p-2 bg-slate-50 rounded-lg text-[11px] font-black text-slate-700"><span>💵 كاش</span><span>{order.paid_cash.toFixed(2)}</span></div>}
+                {order.paid_visa > 0 && <div className="flex justify-between p-2 bg-slate-50 rounded-lg text-[11px] font-black text-slate-700"><span>💳 فيزا</span><span>{order.paid_visa.toFixed(2)}</span></div>}
+                {order.paid_wallet > 0 && <div className="flex justify-between p-2 bg-slate-50 rounded-lg text-[11px] font-black text-slate-700"><span>📱 محفظة</span><span>{order.paid_wallet.toFixed(2)}</span></div>}
+                {order.paid_instapay > 0 && <div className="flex justify-between p-2 bg-slate-50 rounded-lg text-[11px] font-black text-slate-700"><span>⚡ انستا</span><span>{order.paid_instapay.toFixed(2)}</span></div>}
               </div>
             </div>
           </div>
-          <div className="bg-slate-800 text-white px-5 py-2 rounded-lg font-black text-lg">
-             {isPayment ? 'إيصال سداد' : 'فاتورة بيع'}
+
+          {/* Footer */}
+          <div className="text-center mt-10 pt-6 border-t border-dashed border-slate-200 text-[11px] text-slate-400 font-black italic">
+             شكراً لثقتكم بنا - {settings.name} ترحب بكم دائماً
           </div>
-        </div>
-
-        {/* Info Grid */}
-        <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6">
-           <div className="space-y-2">
-              <div className="text-[13px] flex gap-2">
-                <strong className="text-slate-500">اسم العميل:</strong>
-                <span className="text-slate-800 font-bold">{order.customer?.name || 'عميل نقدي'}</span>
-              </div>
-              <div className="text-[13px] flex gap-2">
-                <strong className="text-slate-500">رقم الهاتف:</strong>
-                <span className="text-slate-800 font-bold font-mono">{order.customer?.phone || '-'}</span>
-              </div>
-           </div>
-           <div className="space-y-2 text-left">
-              <div className="text-[13px] flex gap-2 justify-end">
-                <strong className="text-slate-500">:رقم الفاتورة</strong>
-                <span className="text-slate-800 font-bold font-mono">#{order.id}</span>
-              </div>
-              {order.customer?.custom_id && (
-                <div className="text-[13px] flex gap-2 justify-end">
-                  <strong className="text-slate-500">:رقم الكارت (ID)</strong>
-                  <span className="text-slate-800 font-bold font-mono">{order.customer.custom_id}</span>
-                </div>
-              )}
-              <div className="text-[13px] flex gap-2 justify-end">
-                <strong className="text-slate-500">:التاريخ</strong>
-                <span className="text-slate-800 font-bold">{new Date(order.date).toLocaleString('ar-SA')}</span>
-              </div>
-           </div>
-        </div>
-
-        {/* Items Table */}
-        <table className="w-full mb-6 text-sm">
-          <thead>
-            <tr className="bg-slate-100 border-b-2 border-slate-300">
-              <th className="p-3 w-10 text-center text-slate-600 font-bold">#</th>
-              <th className="p-3 text-right text-slate-600 font-bold">{isPayment ? 'البيان' : 'البيان / المنتج'}</th>
-              {!isPayment && <th className="p-3 w-16 text-center text-slate-600 font-bold">الكمية</th>}
-              <th className="p-3 w-24 text-center text-slate-600 font-bold">السعر</th>
-              <th className="p-3 w-28 text-left text-slate-600 font-bold">الإجمالي</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {order.items.map((item, idx) => (
-              <tr key={idx}>
-                <td className="p-3 text-center text-slate-400 font-bold">{idx + 1}</td>
-                <td className="p-3 font-bold text-slate-800">{item.name}</td>
-                {!isPayment && <td className="p-3 text-center font-bold text-slate-800">{item.quantity}</td>}
-                <td className="p-3 text-center font-bold text-slate-800">{item.sale_price.toFixed(2)}</td>
-                <td className="p-3 text-left font-black text-slate-800">{(item.quantity * item.sale_price).toFixed(2)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        {/* Summary Section */}
-        <div className="mr-auto w-3/5 mt-auto">
-          {!isPayment && (
-            <>
-              <div className="flex justify-between py-2 border-b border-slate-50 text-[13px]">
-                 <span className="text-slate-500 font-bold">المجموع الفرعي:</span>
-                 <span className="text-slate-800 font-bold">{subtotal.toFixed(2)} {settings.currency}</span>
-              </div>
-              {calculatedDiscount > 0.5 && (
-                <div className="flex justify-between py-2 border-b border-slate-50 text-[13px] text-red-500 font-bold">
-                   <span>🏷️ الخصم:</span>
-                   <span>- {calculatedDiscount.toFixed(2)} {settings.currency}</span>
-                </div>
-              )}
-              {taxRate > 0 && (
-                <div className="flex justify-between py-2 border-b border-slate-50 text-[13px]">
-                   <span className="text-slate-500 font-bold">الضريبة ({taxRate}%):</span>
-                   <span className="text-slate-800 font-bold">{taxValue.toFixed(2)} {settings.currency}</span>
-                </div>
-              )}
-              <div className="flex justify-between py-3 border-t-2 border-slate-800 mt-1 font-black text-lg text-slate-800">
-                 <span>الإجمالي النهائي:</span>
-                 <span>{order.total.toFixed(2)} {settings.currency}</span>
-              </div>
-            </>
-          )}
-
-          {/* Payment Status Box */}
-          <div className={`mt-4 p-4 rounded-xl border text-center font-bold text-sm ${order.paid_amount < order.total ? 'bg-red-50 text-red-600 border-red-200' : 'bg-emerald-50 text-emerald-600 border-emerald-200'}`}>
-             {order.paid_amount < order.total ? (
-               <div className="space-y-1">
-                 <div className="text-lg">متبقي للتحصيل (آجل): {(order.total - order.paid_amount).toFixed(2)} {settings.currency}</div>
-                 <div className="text-xs opacity-70">تم سداد: {order.paid_amount.toFixed(2)} {settings.currency}</div>
-               </div>
-             ) : (
-               <div className="flex items-center justify-center gap-2 text-lg">
-                 <CheckCircle2 size={22} /> ✓ تم سداد الفاتورة بالكامل
-               </div>
-             )}
-          </div>
-
-          {/* Payment Breakdown */}
-          <div className="mt-3 p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-1.5">
-             <div className="text-[10px] text-slate-400 font-bold border-b border-slate-200 pb-1 mb-1 text-right">تفاصيل الدفع:</div>
-             {order.paid_cash > 0 && <div className="flex justify-between text-[11px] font-bold"><span>💵 كاش:</span><span>{order.paid_cash.toFixed(2)}</span></div>}
-             {order.paid_visa > 0 && <div className="flex justify-between text-[11px] font-bold"><span>💳 فيزا:</span><span>{order.paid_visa.toFixed(2)}</span></div>}
-             {order.paid_wallet > 0 && <div className="flex justify-between text-[11px] font-bold"><span>📱 محفظة:</span><span>{order.paid_wallet.toFixed(2)}</span></div>}
-             {order.paid_instapay > 0 && <div className="flex justify-between text-[11px] font-bold"><span>⚡ انستا باي:</span><span>{order.paid_instapay.toFixed(2)}</span></div>}
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="text-center mt-12 pt-6 border-t border-dashed border-slate-300 text-xs text-slate-400 font-bold italic">
-           شكراً لثقتكم بنا - {settings.name} ترحب بكم دائماً
         </div>
       </div>
 
@@ -261,7 +282,23 @@ export default function PublicInvoice() {
           body { background: white; padding: 0; }
           .no-print { display: none; }
           .min-h-screen { background: white; padding: 0; min-height: auto; }
-          #invoice-print-area { box-shadow: none; border: none; padding: 10mm; margin: 0 auto; width: 148mm; height: 210mm; }
+          #invoice-print-area { 
+            box-shadow: none; 
+            border: none; 
+            padding: 8mm; 
+            margin: 0 auto; 
+            width: 148mm; 
+            min-height: 205mm; 
+            border-radius: 0;
+          }
+          #invoice-print-area table th, #invoice-print-area table td {
+            padding: 8px 4px;
+          }
+        }
+        @media (max-width: 640px) {
+          #invoice-print-area {
+            max-width: 100%;
+          }
         }
       `}</style>
     </div>
