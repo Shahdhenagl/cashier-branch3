@@ -189,6 +189,9 @@ interface CashierStore {
   ) => Promise<void>;
   paySupplierDebt: (supplierId: string, amount: number) => Promise<void>;
 
+  // Realtime
+  setupRealtime: () => void;
+
   // Auth
   isAdminAuthenticated: boolean;
   isPOSAuthenticated: boolean;
@@ -402,6 +405,9 @@ export const useStore = create<CashierStore>((set, get) => ({
 
       // Fetch purchase invoices
       get().loadPurchaseInvoices();
+
+      // Setup Realtime subscriptions
+      get().setupRealtime();
 
       // Sync settings across tabs
       const bc = new BroadcastChannel('cashier-sync');
@@ -745,6 +751,51 @@ export const useStore = create<CashierStore>((set, get) => ({
     
     set((state) => ({ storeSettings: { ...state.storeSettings, ...newSettings } }));
     new BroadcastChannel('cashier-sync').postMessage('sync_settings');
+  },
+
+  setupRealtime: () => {
+    const channel = supabase
+      .channel('db-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'products' },
+        (payload) => {
+          const { eventType, new: newRecord, old: oldRecord } = payload;
+          set((state) => {
+            let updatedProducts = [...state.products];
+            if (eventType === 'INSERT') {
+              const p = newRecord as any;
+              updatedProducts = [{
+                ...p,
+                average_purchase_price: p.average_purchase_price ?? p.purchase_price ?? 0
+              } as Product, ...updatedProducts];
+            } else if (eventType === 'UPDATE') {
+              updatedProducts = updatedProducts.map((p) =>
+                p.id === (newRecord as any).id ? { 
+                  ...(newRecord as any),
+                  average_purchase_price: (newRecord as any).average_purchase_price ?? (newRecord as any).purchase_price ?? 0
+                } as Product : p
+              );
+            } else if (eventType === 'DELETE') {
+              updatedProducts = updatedProducts.filter((p) => p.id === (oldRecord as any).id);
+            }
+            return { products: updatedProducts };
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'orders' },
+        async (payload) => {
+          // Optional: update orders in real-time if needed
+          // For now just products to handle stock sync
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   },
 
   addProduct: async (product) => {
