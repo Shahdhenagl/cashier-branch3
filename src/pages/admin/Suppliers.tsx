@@ -205,6 +205,8 @@ export default function Suppliers() {
       `;
     }).join('');
 
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(`https://cashier-branch3.vercel.app/view-invoice/${inv.id}`)}`;
+
     const html = `<!DOCTYPE html>
 <html dir="rtl" lang="ar">
 <head>
@@ -238,8 +240,10 @@ export default function Suppliers() {
   .summary-row{display:flex;justify-content:space-between;padding:8px 0;font-size:14px;border-bottom:1px solid #f1f5f9;}
   .summary-row.total{border-top:2px solid #1e293b;border-bottom:none;margin-top:5px;font-size:18px;font-weight:900;}
   
-  .footer{text-align:center;margin-top:30px;padding-top:15px;border-top:1px dashed #cbd5e1;font-size:12px;color:#94a3b8;}
-  
+  .footer-container{display:flex;justify-content:space-between;align-items:flex-end;margin-top:30px;padding-top:15px;border-top:1px dashed #cbd5e1;}
+  .footer-text{font-size:12px;color:#94a3b8;flex:1;text-align:center;}
+  .qr-code{width:80px;height:80px;border:1px solid #f1f5f9;padding:5px;border-radius:8px;}
+
   @media print{
     @page{size:A5;margin:0;}
     body{-webkit-print-color-adjust:exact;}
@@ -312,7 +316,10 @@ export default function Suppliers() {
     </div>
   </div>
 
-  <div class="footer">${storeSettings.name} - إدارة الموردين والمشتريات</div>
+  <div class="footer-container">
+    <div class="footer-text">${storeSettings.name} - إدارة الموردين والمشتريات</div>
+    <img class="qr-code" src="${qrCodeUrl}" />
+  </div>
 </div>
 <script>window.onload=()=>{setTimeout(()=>{window.print();window.onafterprint=()=>window.close();},500);}<\/script>
 </body></html>`;
