@@ -265,6 +265,8 @@ export default function Finance() {
     const isOrder = t.originType === 'order';
     
     // Simple helper to generate formatted invoice from Finance
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(`https://cashier-branch3.vercel.app/view-invoice/${inv.id}`)}`;
+
     const html = `<!DOCTYPE html>
 <html dir="rtl" lang="ar">
 <head>
@@ -274,7 +276,7 @@ export default function Finance() {
   @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
   *{margin:0;padding:0;box-sizing:border-box;font-family:'Cairo', sans-serif;}
   body{background:#fff;color:#1e293b;padding:15px;}
-  .invoice-card{width:148mm;margin:0 auto;border:1px solid #eee;padding:15px;border-radius:15px;}
+  .invoice-card{width:148mm;margin:0 auto;border:1px solid #eee;padding:15px;border-radius:15px;position:relative;}
   .header{display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #1e293b;padding-bottom:10px;margin-bottom:15px;}
   .store-info{font-size:12px;color:#64748b;}
   .store-name{font-size:22px;font-weight:900;color:#1e293b;}
@@ -292,7 +294,10 @@ export default function Finance() {
   .sum-row{display:flex;justify-content:space-between;padding:5px 0;font-size:12px;}
   .sum-total{font-weight:900;font-size:16px;border-top:2px solid #1e293b;padding-top:5px;margin-top:5px;}
   
-  .footer{text-align:center;font-size:10px;color:#94a3b8;margin-top:20px;border-top:1px dashed #eee;padding-top:10px;}
+  .footer-container{display:flex;justify-content:space-between;align-items:flex-end;margin-top:20px;padding-top:10px;border-top:1px dashed #eee;}
+  .footer-text{font-size:10px;color:#94a3b8;text-align:center;flex:1;}
+  .qr-code{width:70px;height:70px;border:1px solid #f1f5f9;padding:5px;border-radius:8px;}
+
   @media print{ @page{size:A5;margin:0;} body{padding:0;} .invoice-card{border:none;width:100%;} }
 </style>
 </head>
@@ -341,8 +346,14 @@ export default function Finance() {
     ${inv.total - inv.paid_amount > 0 ? `<div class="sum-row" style="color:#ef4444; font-weight:bold;"><span>المتبقي:</span><span>${(inv.total - inv.paid_amount).toFixed(2)} ${storeSettings.currency}</span></div>` : ''}
   </div>
 
-  <div class="footer">نظام الكاشير المتقدم - سجل المالية</div>
+  <div class="footer-container">
+    <div class="footer-text">نظام الكاشير المتقدم - سجل المالية</div>
+    <img class="qr-code" src="${qrCodeUrl}" />
+  </div>
 </div>
+<script>window.onload=()=>{setTimeout(()=>{window.print();window.onafterprint=()=>window.close();},500);}<\/script>
+</body>
+</html>`;
 <script>window.onload=()=>{setTimeout(()=>{window.print();window.onafterprint=()=>window.close();},500);}<\/script>
 </body>
 </html>`;
