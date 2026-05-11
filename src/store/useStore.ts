@@ -1092,33 +1092,45 @@ setupRealtime: () => {
     });
   },
 
-  paySupplierDebt: async (supplierId, amount) => {
-    // We'll create a special purchase invoice for payment (type or negative total? no, let's just add to paid_amount of oldest invoices)
-    // Actually, a cleaner way is to have a payments table. 
-    // But for now, we'll find invoices with debt for this supplier and update them.
+  paySupplierDebt: async (supplierId, amount, splitPayments) => {
+    const state = get();
+    const invoiceNumber = `PAY-${Date.now()}`;
     
-    let remainingAmount = amount;
-    const { data: invoices } = await supabase
-      .from('purchase_invoices')
-      .select('*')
-      .eq('supplier_id', supplierId)
-      .order('created_at', { ascending: true });
+    try {
+      const { data, error } = await supabase
+        .from('purchase_invoices')
+        .insert({
+          invoice_number: invoiceNumber,
+          supplier_id: supplierId,
+          total: 0,
+          paid_amount: amount,
+          paid_cash: splitPayments?.cash || 0,
+          paid_visa: splitPayments?.visa || 0,
+          paid_wallet: splitPayments?.wallet || 0,
+          paid_instapay: splitPayments?.instapay || 0,
+          payment_method: (splitPayments?.cash || 0) >= (splitPayments?.visa || 0) ? 'cash' : 'visa'
+        })
+        .select()
+        .single();
 
-    if (invoices) {
-      for (const inv of invoices) {
-        if (remainingAmount <= 0) break;
-        const debt = inv.total - inv.paid_amount;
-        if (debt > 0) {
-          const payment = Math.min(remainingAmount, debt);
-          const newPaid = inv.paid_amount + payment;
-          await supabase.from('purchase_invoices').update({ paid_amount: newPaid }).eq('id', inv.id);
-          remainingAmount -= payment;
-        }
+      if (error) {
+        console.error("Payment Insert Error:", error);
+        throw error;
       }
-    }
 
-    // Refresh data
-    await get().loadPurchaseInvoices();
+      // Update local state with the complete record from DB (includes created_at)
+      const newPayment: PurchaseInvoice = {
+        ...(data as any),
+        items: []
+      };
+
+      set({
+        purchaseInvoices: [newPayment, ...state.purchaseInvoices]
+      });
+    } catch (e) {
+      console.error("Pay Supplier Debt Exception:", e);
+      throw e;
+    }
   },
 
   updateCustomer: async (id, updated) => {
