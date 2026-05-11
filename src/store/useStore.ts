@@ -825,18 +825,18 @@ export const useStore = create<CashierStore>((set, get) => ({
   },
 
   addProduct: async (product) => {
-    const { data } = await supabase.from('products').insert(product).select().single();
-    if (data) set((state) => ({ products: [data as unknown as Product, ...state.products] }));
+    await supabase.from('products').insert(product);
+    // State will be updated via Realtime subscription
   },
 
   updateProduct: async (id, updated) => {
     await supabase.from('products').update(updated).eq('id', id);
-    set((state) => ({ products: state.products.map((p) => (p.id === id ? { ...p, ...updated } : p)) }));
+    // State will be updated via Realtime subscription
   },
 
   deleteProduct: async (id) => {
     await supabase.from('products').delete().eq('id', id);
-    set((state) => ({ products: state.products.filter((p) => p.id !== id) }));
+    // State will be updated via Realtime subscription
   },
 
   // ── Expenses ──────────────────────────────────────────────
