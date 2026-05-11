@@ -173,6 +173,25 @@ export default function Suppliers() {
 
   const printPurchaseInvoice = (inv: any) => {
     const supplier = suppliers.find(s => s.id === inv.supplier_id);
+    const isPaymentReceipt = inv.total === 0;
+    
+    // Calculate historical debt at the time of this invoice/payment
+    const relevantInvoices = purchaseInvoices
+      .filter(i => i.supplier_id === inv.supplier_id && new Date(i.created_at) <= new Date(inv.created_at))
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    
+    let debtBefore = 0;
+    relevantInvoices.forEach(i => {
+      if (i.id !== inv.id) {
+        debtBefore += (i.total - i.paid_amount);
+      }
+    });
+
+    // If it's a purchase invoice, debtBefore doesn't include the current invoice's total yet.
+    // If it's a payment receipt, debtBefore is the total debt just before this payment.
+    const currentDebtImpact = inv.total - inv.paid_amount;
+    const debtAfter = debtBefore + currentDebtImpact;
+
     const itemsHtml = (inv.items || []).map((item: any, index: number) => {
       const product = products.find(p => p.id === item.product_id);
       return `
@@ -186,7 +205,6 @@ export default function Suppliers() {
       `;
     }).join('');
 
-    const isPaymentReceipt = inv.total === 0;
     const html = `<!DOCTYPE html>
 <html dir="rtl" lang="ar">
 <head>
@@ -216,9 +234,9 @@ export default function Suppliers() {
   thead th:nth-child(2){text-align:right;}
   thead th:last-child{text-align:left;}
   
-  .summary-section{margin-right:auto;width:60%;margin-top:auto;}
+  .summary-section{margin-right:auto;width:65%;margin-top:auto;}
   .summary-row{display:flex;justify-content:space-between;padding:8px 0;font-size:14px;border-bottom:1px solid #f1f5f9;}
-  .summary-row.total{border-top:2px solid #1e293b;border-bottom:none;margin-top:5px;font-size:20px;font-weight:900;}
+  .summary-row.total{border-top:2px solid #1e293b;border-bottom:none;margin-top:5px;font-size:18px;font-weight:900;}
   
   .footer{text-align:center;margin-top:30px;padding-top:15px;border-top:1px dashed #cbd5e1;font-size:12px;color:#94a3b8;}
   
@@ -261,33 +279,40 @@ export default function Suppliers() {
     <tbody>${itemsHtml}</tbody>
   </table>
   ` : `
-  <div style="padding:40px; text-align:center; background:#f0fdf4; border:2px dashed #bbf7d0; border-radius:20px; margin-bottom:30px;">
-    <h2 style="color:#15803d; font-size:24px; font-weight:900;">إيصال سداد مديونية</h2>
-    <p style="color:#166534; margin-top:10px; font-weight:bold;">تم سداد مبلغ للمورد كدفعة من الحساب</p>
+  <div style="padding:30px; text-align:center; background:#f0fdf4; border:2px dashed #bbf7d0; border-radius:20px; margin-bottom:20px;">
+    <h2 style="color:#15803d; font-size:22px; font-weight:900;">إيصال سداد مديونية</h2>
+    <p style="color:#166534; margin-top:5px; font-weight:bold;">تم تسليم المبلغ للمورد وتخفيضه من الحساب</p>
   </div>
   `}
 
   <div class="summary-section">
-    ${!isPaymentReceipt ? `<div class="summary-row total"><span>إجمالي الفاتورة:</span><span>${inv.total.toFixed(2)} ${storeSettings.currency}</span></div>` : ''}
-    <div class="summary-row" style="color: #059669; font-weight: bold; font-size: 22px; border-bottom: 2px solid #059669; padding-bottom: 10px;">
-       <span>المبلغ المدفوع:</span>
-       <span>${inv.paid_amount.toFixed(2)} ${storeSettings.currency}</span>
+    ${!isPaymentReceipt ? `<div class="summary-row total"><span>إجمالي الفاتورة:</span><span>${inv.total.toFixed(2)}</span></div>` : ''}
+    
+    <div class="summary-row" style="color: #64748b; font-weight: bold;">
+      <span>المديونية قبل السداد:</span>
+      <span>${debtBefore.toFixed(2)}</span>
+    </div>
+
+    <div class="summary-row" style="color: #059669; font-weight: 900; font-size: 20px; background: #ecfdf5; padding: 10px; border-radius: 8px; border: 1px solid #bbf7d0; margin: 8px 0;">
+       <span>المبلغ المدفوع حالياً:</span>
+       <span>${inv.paid_amount.toFixed(2)}</span>
+    </div>
+
+    <div class="summary-row" style="color: #ef4444; font-weight: 900; font-size: 18px; border-top: 2px solid #ef4444; padding-top: 10px;">
+       <span>المتبقي للمورد:</span>
+       <span>${debtAfter.toFixed(2)}</span>
     </div>
     
-    <div style="margin-top:15px; padding:12px; background:#f9fafb; border-radius:12px; border:1px solid #eee;">
-      <div style="font-size:12px; color:#64748b; margin-bottom:6px; border-bottom:1px solid #eee; padding-bottom:4px; text-align:right; font-weight:bold;">تفاصيل الدفع:</div>
-      ${inv.paid_cash > 0 ? `<div class="summary-row" style="font-size:13px;"><span>💵 كاش:</span><span>${inv.paid_cash.toFixed(2)}</span></div>` : ''}
-      ${inv.paid_visa > 0 ? `<div class="summary-row" style="font-size:13px;"><span>💳 فيزا:</span><span>${inv.paid_visa.toFixed(2)}</span></div>` : ''}
-      ${inv.paid_wallet > 0 ? `<div class="summary-row" style="font-size:13px;"><span>📱 محفظة:</span><span>${inv.paid_wallet.toFixed(2)}</span></div>` : ''}
-      ${inv.paid_instapay > 0 ? `<div class="summary-row" style="font-size:13px;"><span>⚡ انستا باي:</span><span>${inv.paid_instapay.toFixed(2)}</span></div>` : ''}
+    <div style="margin-top:15px; padding:10px; background:#f9fafb; border-radius:10px; border:1px solid #eee;">
+      <div style="font-size:11px; color:#64748b; margin-bottom:4px; border-bottom:1px solid #eee; padding-bottom:4px; text-align:right; font-weight:bold;">طريقة الدفع:</div>
+      ${inv.paid_cash > 0 ? `<div class="summary-row" style="font-size:12px; border:none; padding:2px 0;"><span>💵 كاش:</span><span>${inv.paid_cash.toFixed(2)}</span></div>` : ''}
+      ${inv.paid_visa > 0 ? `<div class="summary-row" style="font-size:12px; border:none; padding:2px 0;"><span>💳 فيزا:</span><span>${inv.paid_visa.toFixed(2)}</span></div>` : ''}
+      ${inv.paid_wallet > 0 ? `<div class="summary-row" style="font-size:12px; border:none; padding:2px 0;"><span>📱 محفظة:</span><span>${inv.paid_wallet.toFixed(2)}</span></div>` : ''}
+      ${inv.paid_instapay > 0 ? `<div class="summary-row" style="font-size:12px; border:none; padding:2px 0;"><span>⚡ انستا باي:</span><span>${inv.paid_instapay.toFixed(2)}</span></div>` : ''}
     </div>
-
-    ${(!isPaymentReceipt && inv.total - inv.paid_amount > 0) ? `
-      <div class="summary-row" style="color: #dc2626; font-weight: bold; margin-top:10px;"><span>المتبقي للمورد:</span><span>${(inv.total - inv.paid_amount).toFixed(2)} ${storeSettings.currency}</span></div>
-    ` : ''}
   </div>
 
-  <div class="footer">نظام الكاشير المتقدم - إدارة الموردين والمشتريات</div>
+  <div class="footer">${storeSettings.name} - إدارة الموردين والمشتريات</div>
 </div>
 <script>window.onload=()=>{setTimeout(()=>{window.print();window.onafterprint=()=>window.close();},500);}<\/script>
 </body></html>`;
