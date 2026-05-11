@@ -776,9 +776,62 @@ export const useStore = create<CashierStore>((set, get) => ({
     new BroadcastChannel('cashier-sync').postMessage('sync_settings');
   },
 
-  setupRealtime: () => {
+setupRealtime: () => {
     const channel = supabase
       .channel('db-changes')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'orders' },
+        async (payload) => {
+          const newOrder = payload.new as any;
+          
+          // Fetch items for the new order to have a complete order object
+          const { data: items } = await supabase
+            .from('order_items')
+            .select('*, products(*)')
+            .eq('order_id', newOrder.id);
+
+          const { data: customer } = newOrder.customer_id 
+            ? await supabase.from('customers').select('*').eq('id', newOrder.customer_id).single()
+            : { data: null };
+
+          const formattedOrder: Order = {
+            id: newOrder.id,
+            total: newOrder.total,
+            paid_amount: newOrder.paid_amount,
+            paid_cash: newOrder.paid_cash || 0,
+            paid_visa: newOrder.paid_visa || 0,
+            paid_wallet: newOrder.paid_wallet || 0,
+            paid_instapay: newOrder.paid_instapay || 0,
+            type: newOrder.type,
+            payment_method: newOrder.payment_method,
+            date: newOrder.created_at,
+            cashier_name: newOrder.cashier_name,
+            customer: customer ? {
+              id: customer.id,
+              name: customer.name,
+              phone: customer.phone,
+              timestamp: customer.created_at
+            } : undefined,
+            items: (items || []).map(i => ({
+              id: i.product_id,
+              name: i.product_name,
+              barcode: i.barcode,
+              purchase_price: i.purchase_price,
+              average_purchase_price: i.purchase_price,
+              sale_price: i.sale_price,
+              stock_quantity: i.products?.stock_quantity || 0,
+              category_id: i.products?.category_id || '',
+              quantity: i.quantity,
+              returned_quantity: i.returned_quantity || 0
+            }))
+          };
+
+          set((state) => ({
+            orders: [formattedOrder, ...state.orders.filter(o => o.id !== formattedOrder.id)]
+          }));
+        }
+      )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'products' },
