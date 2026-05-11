@@ -307,24 +307,24 @@ export default function Suppliers() {
        <span>${debtAfter.toFixed(2)}</span>
     </div>
     
-    <div style="margin-top:15px; padding:10px; background:#f9fafb; border-radius:10px; border:1px solid #eee;">
-      <div style="font-size:11px; color:#64748b; margin-bottom:4px; border-bottom:1px solid #eee; padding-bottom:4px; text-align:right; font-weight:bold;">طريقة الدفع:</div>
-      ${inv.paid_cash > 0 ? `<div class="summary-row" style="font-size:12px; border:none; padding:2px 0;"><span>💵 كاش:</span><span>${inv.paid_cash.toFixed(2)}</span></div>` : ''}
-      ${inv.paid_visa > 0 ? `<div class="summary-row" style="font-size:12px; border:none; padding:2px 0;"><span>💳 فيزا:</span><span>${inv.paid_visa.toFixed(2)}</span></div>` : ''}
-      ${inv.paid_wallet > 0 ? `<div class="summary-row" style="font-size:12px; border:none; padding:2px 0;"><span>📱 محفظة:</span><span>${inv.paid_wallet.toFixed(2)}</span></div>` : ''}
-      ${inv.paid_instapay > 0 ? `<div class="summary-row" style="font-size:12px; border:none; padding:2px 0;"><span>⚡ انستا باي:</span><span>${inv.paid_instapay.toFixed(2)}</span></div>` : ''}
+    <div style="display: flex; gap: 20px; align-items: flex-end; margin-top: 15px;">
+      <div style="flex: 1; padding: 10px; background: #f9fafb; border-radius: 10px; border: 1px solid #eee;">
+        <div style="font-size: 11px; color: #64748b; margin-bottom: 4px; border-bottom: 1px solid #eee; padding-bottom: 4px; text-align: right; font-weight: bold;">طريقة الدفع:</div>
+        ${inv.paid_cash > 0 ? `<div class="summary-row" style="font-size: 12px; border: none; padding: 2px 0;"><span>💵 كاش:</span><span>${inv.paid_cash.toFixed(2)}</span></div>` : ''}
+        ${inv.paid_visa > 0 ? `<div class="summary-row" style="font-size: 12px; border: none; padding: 2px 0;"><span>💳 فيزا:</span><span>${inv.paid_visa.toFixed(2)}</span></div>` : ''}
+        ${inv.paid_wallet > 0 ? `<div class="summary-row" style="font-size: 12px; border: none; padding: 2px 0;"><span>📱 محفظة:</span><span>${inv.paid_wallet.toFixed(2)}</span></div>` : ''}
+        ${inv.paid_instapay > 0 ? `<div class="summary-row" style="font-size: 12px; border: none; padding: 2px 0;"><span>⚡ انستا باي:</span><span>${inv.paid_instapay.toFixed(2)}</span></div>` : ''}
+      </div>
+      <div style="text-align: center;">
+        <img src="${qrCodeUrl}" style="width: 80px; height: 80px; border: 1px solid #eee; padding: 5px; border-radius: 8px; background: white;" />
+        <div style="font-size: 9px; font-weight: bold; color: #1e293b; margin-top: 4px;">تفاصيل الفاتورة</div>
+      </div>
     </div>
   </div>
 
-    <div style="margin-top: 20px; display: flex; justify-content: space-between; align-items: flex-end;">
-      <div style="text-align: center;">
-        <img src="${qrCodeUrl}" style="width: 85px; height: 85px; border: 1px solid #eee; padding: 5px; border-radius: 8px;" />
-        <div style="font-size: 10px; font-weight: bold; color: #1e293b; margin-top: 5px;">تفاصيل الفاتورة</div>
-      </div>
-      <div style="font-size: 10px; color: #94a3b8; flex: 1; border-top: 1px dashed #cbd5e1; padding-top: 10px; margin-right: 20px; text-align: left;">
-        ${storeSettings.name} - إدارة الموردين والمشتريات
-      </div>
-    </div>
+  <div style="margin-top: 20px; border-top: 1px dashed #cbd5e1; padding-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+    <div style="font-size: 10px; color: #94a3b8;">${storeSettings.name} - إدارة الموردين</div>
+    <div style="font-size: 10px; color: #94a3b8; font-family: monospace;">#${inv.invoice_number}</div>
   </div>
 </div>
 <script>window.onload=()=>{setTimeout(()=>{window.print();window.onafterprint=()=>window.close();},500);}<\/script>
