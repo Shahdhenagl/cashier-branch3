@@ -338,10 +338,13 @@ export default function POS() {
     if (existingCust) {
       const cOrders = orders.filter(o => o.customer?.id === existingCust.id);
       const cDebt = cOrders.reduce((sum, o) => {
+        if (o.type === 'payment') {
+          return sum - o.paid_amount;
+        }
         const itemsSum = o.items.reduce((s, i) => s + (i.quantity * i.sale_price), 0);
         const discountRatio = itemsSum > 0 ? o.total / itemsSum : 1;
         const returnedValue = o.items.reduce((s, i) => s + (i.returned_quantity * i.sale_price), 0) * discountRatio;
-        return sum + Math.max(0, (o.total - returnedValue) - o.paid_amount);
+        return sum + (o.total - returnedValue - o.paid_amount);
       }, 0);
       setCustomerDebt(cDebt > 0 ? cDebt : 0);
     } else {
