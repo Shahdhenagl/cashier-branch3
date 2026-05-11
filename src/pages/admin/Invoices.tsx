@@ -197,6 +197,10 @@ export default function Invoices() {
       ` : ''}
     </div>
 
+    <div class="qr-code-container">
+      <img class="qr-code-img" src="${qrCodeUrl}" alt="QR Code" />
+      <div class="qr-label">تفاصيل الفاتورة</div>
+    </div>
     <div class="footer">شكراً لثقتكم بنا - ${storeSettings.name} ترحب بكم دائماً</div>
   </div>
   <script>window.onload=()=>{setTimeout(()=>{window.print();window.onafterprint=()=>window.close();},500);}<\/script>
