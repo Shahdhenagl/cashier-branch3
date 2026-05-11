@@ -90,22 +90,18 @@ export default function POS() {
 
     const customerBlock = (orderDetails.customerName || orderDetails.customerPhone || orderDetails.customId)
       ? `<div class="customer-info-grid">
-          <div style="grid-column: span 2; display:grid; grid-template-columns: 1fr 1fr; gap: 8px;">
             <div class="info-item"><strong>اسم العميل:</strong> <span>${orderDetails.customerName || '—'}</span></div>
-            <div class="info-item"><strong>رقم الكارت (ID):</strong> <span dir="ltr">${orderDetails.customId || orderDetails.customerId?.substring(0, 8) || '—'}</span></div>
             <div class="info-item"><strong>رقم الهاتف:</strong> <span dir="ltr">${orderDetails.customerPhone || '—'}</span></div>
+            <div class="info-item"><strong>رقم الكارت (ID):</strong> <span dir="ltr">${orderDetails.customId || orderDetails.customerId?.substring(0, 8) || '—'}</span></div>
             <div class="info-item"><strong>رقم الفاتورة:</strong> <span>#${invId}</span></div>
+            <div class="info-item"><strong>المسؤول:</strong> <span>${activeCashier?.name || '—'}</span></div>
             <div class="info-item"><strong>التاريخ:</strong> <span>${printDate}</span></div>
-          </div>
-          <img class="qr-code-img" src="${qrCodeUrl}" alt="QR Code" />
          </div>`
-      : `<div class="customer-info-grid" style="grid-template-columns: 1fr auto;">
-          <div style="display:grid; grid-template-columns: 1fr; gap: 4px;">
+      : `<div class="customer-info-grid">
             <div class="info-item"><strong>اسم العميل:</strong> <span>عميل نقدي</span></div>
             <div class="info-item"><strong>رقم الفاتورة:</strong> <span>#${invId}</span></div>
+            <div class="info-item"><strong>المسؤول:</strong> <span>${activeCashier?.name || '—'}</span></div>
             <div class="info-item"><strong>التاريخ:</strong> <span>${printDate}</span></div>
-          </div>
-          <img class="qr-code-img" src="${qrCodeUrl}" alt="QR Code" />
          </div>`;
 
     const html = `<!DOCTYPE html>
@@ -127,12 +123,14 @@ export default function POS() {
   
   .invoice-title-badge{background:#1e293b;color:#fff;padding:6px 15px;border-radius:6px;font-weight:900;font-size:16px;}
   
-  .customer-info-grid{display:grid;grid-template-columns:1fr auto;gap:8px;margin-bottom:10px;background:#f8fafc;padding:10px;border-radius:10px;border:1px solid #e2e8f0;align-items:center;}
+  .customer-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;background:#f8fafc;padding:10px;border-radius:10px;border:1px solid #e2e8f0;}
   .info-item{font-size:12px;display:flex;gap:6px;}
   .info-item strong{color:#64748b;white-space:nowrap;}
   .info-item span{color:#1e293b;font-weight:700;}
   
-  .qr-code-img{width:65px;height:65px;padding:4px;background:#fff;border-radius:6px;border:1px solid #e2e8f0;}
+  .qr-code-container{position:absolute;bottom:45px;right:15px;display:flex;flex-direction:column;align-items:center;gap:2px;}
+  .qr-code-img{width:50px;height:50px;padding:2px;background:#fff;border-radius:4px;border:1px solid #e2e8f0;}
+  .qr-label{font-size:7px;font-weight:bold;color:#94a3b8;text-align:center;}
 
   table{width:100%;border-collapse:collapse;margin-bottom:10px;}
   thead th{background:#f1f5f9;color:#475569;font-size:12px;padding:8px 6px;text-align:center;border-bottom:2px solid #cbd5e1;}
@@ -174,7 +172,6 @@ export default function POS() {
   </div>
 
   ${customerBlock}
-  <div style="font-size:11px; color:#64748b; margin-bottom:15px; text-align:right;">المسؤول عن الفاتورة: <strong>${activeCashier?.name || 'غير معروف'}</strong></div>
 
   <table>
     <thead><tr>
@@ -187,12 +184,12 @@ export default function POS() {
     <tbody>${itemsHtml}</tbody>
   </table>
 
-    <div class="summary-section">
-      <div class="summary-row"><span>المجموع الفرعي:</span><span>${orderDetails.subtotal.toFixed(2)} ${currentSettings.currency}</span></div>
-      ${orderDetails.discount > 0 ? `<div class="summary-row" style="color:#e53e3e;font-weight:700;"><span>🏷️ الخصم:</span><span>- ${orderDetails.discount.toFixed(2)} ${currentSettings.currency}</span></div>` : ''}
-      <div class="summary-row"><span>الضريبة (${currentSettings.taxRate}%):</span><span>${orderDetails.tax.toFixed(2)} ${currentSettings.currency}</span></div>
-      <div class="summary-row total"><span>الإجمالي النهائي:</span><span>${orderDetails.total.toFixed(2)} ${currentSettings.currency}</span></div>
-    
+  <div class="summary-section">
+    <div class="summary-row"><span>المجموع الفرعي:</span><span>${orderDetails.subtotal.toFixed(2)} ${currentSettings.currency}</span></div>
+    ${orderDetails.discount > 0 ? `<div class="summary-row" style="color:#e53e3e;font-weight:700;"><span>🏷️ الخصم:</span><span>- ${orderDetails.discount.toFixed(2)} ${currentSettings.currency}</span></div>` : ''}
+    <div class="summary-row"><span>الضريبة (${currentSettings.taxRate}%):</span><span>${orderDetails.tax.toFixed(2)} ${currentSettings.currency}</span></div>
+    <div class="summary-row total"><span>الإجمالي النهائي:</span><span>${orderDetails.total.toFixed(2)} ${currentSettings.currency}</span></div>
+  
     ${(orderDetails.paidAmount !== undefined && orderDetails.paidAmount < orderDetails.total) ? `
       <div class="payment-status status-debt">
         <div>متبقي للتحصيل (آجل): ${(orderDetails.total - (orderDetails.paidAmount || 0)).toFixed(2)} ${currentSettings.currency}</div>
@@ -201,6 +198,7 @@ export default function POS() {
     ` : `
       <div class="payment-status status-paid">✓ تم سداد الفاتورة بالكامل</div>
     `}
+    
     <div style="margin-top:10px; padding:8px; background:#f9fafb; border-radius:8px; border:1px solid #eee;">
       <div style="font-size:11px; color:#64748b; margin-bottom:4px; border-bottom:1px solid #eee; padding-bottom:2px; text-align:right;">تفاصيل الدفع:</div>
       ${orderDetails.splitPayments.cash > 0 ? `<div class="summary-row" style="font-size:12px;"><span>💵 كاش:</span><span>${orderDetails.splitPayments.cash.toFixed(2)}</span></div>` : ''}
@@ -210,6 +208,10 @@ export default function POS() {
     </div>
   </div>
 
+  <div class="qr-code-container">
+    <img class="qr-code-img" src="${qrCodeUrl}" alt="QR Code" />
+    <div class="qr-label">تفاصيل الفاتورة</div>
+  </div>
   <div class="footer">شكراً لثقتكم بنا - ${currentSettings.name} ترحب بكم دائماً</div>
 </div>
 <script>window.onload=()=>{setTimeout(()=>{window.print();window.onafterprint=()=>window.close();},500);}<\/script>
