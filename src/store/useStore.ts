@@ -786,7 +786,7 @@ export const useStore = create<CashierStore>((set, get) => ({
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'orders' },
-        async (payload) => {
+        async () => {
           // Optional: update orders in real-time if needed
           // For now just products to handle stock sync
         }
