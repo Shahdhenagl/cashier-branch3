@@ -34,7 +34,7 @@ export default function PublicInvoice() {
         }
 
         // Try Orders first
-        const { data: o, error: oErr } = await supabase
+        const { data: o } = await supabase
           .from('orders')
           .select('*, customers(*), order_items(*, products(*))')
           .eq('id', id)
@@ -98,7 +98,7 @@ export default function PublicInvoice() {
         }
 
         // Try Purchase Invoices if not found in orders
-        const { data: inv, error: invErr } = await supabase
+        const { data: inv } = await supabase
           .from('purchase_invoices')
           .select('*, suppliers(*), purchase_invoice_items(*, products(*))')
           .eq('id', id)
