@@ -316,9 +316,13 @@ export default function Suppliers() {
     </div>
   </div>
 
-  <div class="footer-container">
-    <div class="footer-text">${storeSettings.name} - إدارة الموردين والمشتريات</div>
-    <img class="qr-code" src="${qrCodeUrl}" />
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 15px; border-top: 1px dashed #cbd5e1; padding-top: 15px;">
+      <div style="flex: 1;">
+        <div style="font-size: 10px; color: #94a3b8; margin-bottom: 5px;">${storeSettings.name} - إدارة الموردين</div>
+        <div style="font-size: 10px; color: #94a3b8;">رقم المستند: #${inv.invoice_number}</div>
+      </div>
+      <img class="qr-code" src="${qrCodeUrl}" style="width: 70px; height: 70px; margin-right: 15px;" />
+    </div>
   </div>
 </div>
 <script>window.onload=()=>{setTimeout(()=>{window.print();window.onafterprint=()=>window.close();},500);}<\/script>
