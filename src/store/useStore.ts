@@ -808,10 +808,13 @@ export const useStore = create<CashierStore>((set, get) => ({
       )
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'orders' },
-        async () => {
-          // Optional: update orders in real-time if needed
-          // For now just products to handle stock sync
+        { event: 'UPDATE', schema: 'public', table: 'invoice_counter' },
+        (payload) => {
+          const nextVal = (payload.new as any).current_value;
+          set({ 
+            invoiceCounter: nextVal,
+            activeInvoiceId: nextVal.toString()
+          });
         }
       )
       .subscribe();
