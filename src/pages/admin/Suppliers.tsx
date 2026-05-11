@@ -16,6 +16,10 @@ export default function Suppliers() {
   const [isSaving, setIsSaving] = useState(false);
   const [isPayingDebt, setIsPayingDebt] = useState(false);
   const [debtAmount, setDebtAmount] = useState('');
+  const [debtPaidCash, setDebtPaidCash] = useState('');
+  const [debtPaidVisa, setDebtPaidVisa] = useState('');
+  const [debtPaidWallet, setDebtPaidWallet] = useState('');
+  const [debtPaidInstapay, setDebtPaidInstapay] = useState('');
 
   const [formData, setFormData] = useState({ name: '', phone: '', address: '' });
 
@@ -168,26 +172,12 @@ export default function Suppliers() {
     }
   };
 
-  const printPurchaseInvoice = (inv: any) => {
-    const supplier = suppliers.find(s => s.id === inv.supplier_id);
-    const itemsHtml = (inv.items || []).map((item: any, index: number) => {
-      const product = products.find(p => p.id === item.product_id);
-      return `
-        <tr>
-          <td style="padding:10px 4px;border-bottom:1px solid #eee;text-align:center;">${index + 1}</td>
-          <td style="padding:10px 4px;border-bottom:1px solid #eee;font-weight:bold;">${product?.name || 'منتج غير معروف'}</td>
-          <td style="padding:10px 4px;border-bottom:1px solid #eee;text-align:center;">${item.quantity}</td>
-          <td style="padding:10px 4px;border-bottom:1px solid #eee;text-align:center;">${item.purchase_price.toFixed(2)}</td>
-          <td style="padding:10px 4px;border-bottom:1px solid #eee;text-align:left;font-weight:black;">${(item.purchase_price * item.quantity).toFixed(2)}</td>
-        </tr>
-      `;
-    }).join('');
-
+    const isPaymentReceipt = inv.total === 0;
     const html = `<!DOCTYPE html>
 <html dir="rtl" lang="ar">
 <head>
 <meta charset="UTF-8"/>
-<title>فاتورة مشتريات #${inv.invoice_number}</title>
+<title>${isPaymentReceipt ? 'إيصال سداد' : 'فاتورة مشتريات'} #${inv.invoice_number}</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
   *{margin:0;padding:0;box-sizing:border-box;font-family:'Cairo', sans-serif;}
@@ -226,25 +216,26 @@ export default function Suppliers() {
 </style>
 </head>
 <body>
-<div class="invoice-container">
-  <div class="header-main">
-    <div class="store-identity">
-      <img class="logo" src="${storeSettings.logo}" onerror="this.style.display='none'" />
+<div className="invoice-container">
+  <div className="header-main">
+    <div className="store-identity">
+      <img className="logo" src="${storeSettings.logo}" onerror="this.style.display='none'" />
       <div>
-        <div class="store-name">${storeSettings.name}</div>
-        <div class="store-details">${storeSettings.address} | ${storeSettings.phone}</div>
+        <div className="store-name">${storeSettings.name}</div>
+        <div className="store-details">${storeSettings.address} | ${storeSettings.phone}</div>
       </div>
     </div>
-    <div class="invoice-title-badge">فاتورة مشتريات</div>
+    <div className="invoice-title-badge">${isPaymentReceipt ? 'إيصال سداد مورد' : 'فاتورة مشتريات'}</div>
   </div>
 
-  <div class="info-grid">
-    <div class="info-item"><strong>المورد:</strong> <span>${supplier?.name || 'مورد محذوف'}</span></div>
-    <div class="info-item"><strong>رقم الهاتف:</strong> <span dir="ltr">${supplier?.phone || '—'}</span></div>
-    <div class="info-item"><strong>رقم الفاتورة:</strong> <span>#${inv.invoice_number}</span></div>
-    <div class="info-item"><strong>التاريخ:</strong> <span>${new Date(inv.created_at).toLocaleString('ar-SA')}</span></div>
+  <div className="info-grid">
+    <div className="info-item"><strong>المورد:</strong> <span>${supplier?.name || 'مورد محذوف'}</span></div>
+    <div className="info-item"><strong>رقم الهاتف:</strong> <span dir="ltr">${supplier?.phone || '—'}</span></div>
+    <div className="info-item"><strong>رقم المستند:</strong> <span>#${inv.invoice_number}</span></div>
+    <div className="info-item"><strong>التاريخ:</strong> <span>${new Date(inv.created_at).toLocaleString('ar-SA')}</span></div>
   </div>
 
+  ${!isPaymentReceipt ? `
   <table>
     <thead><tr>
       <th style="width:40px">#</th>
@@ -255,23 +246,35 @@ export default function Suppliers() {
     </tr></thead>
     <tbody>${itemsHtml}</tbody>
   </table>
+  ` : `
+  <div style="padding:40px; text-align:center; background:#f0fdf4; border:2px dashed #bbf7d0; border-radius:20px; margin-bottom:30px;">
+    <h2 style="color:#15803d; font-size:24px; font-weight:900;">إيصال سداد مديونية</h2>
+    <p style="color:#166534; margin-top:10px; font-weight:bold;">تم سداد مبلغ للمورد كدفعة من الحساب</p>
+  </div>
+  `}
 
-  <div class="summary-section">
-    <div class="summary-row total"><span>إجمالي الفاتورة:</span><span>${inv.total.toFixed(2)} ${storeSettings.currency}</span></div>
-    <div class="summary-row" style="color: #059669; font-weight: bold;"><span>المبلغ المدفوع:</span><span>${inv.paid_amount.toFixed(2)} ${storeSettings.currency}</span></div>
+  <div className="summary-section">
+    ${!isPaymentReceipt ? `<div className="summary-row total"><span>إجمالي الفاتورة:</span><span>${inv.total.toFixed(2)} ${storeSettings.currency}</span></div>` : ''}
+    <div className="summary-row" style="color: #059669; font-weight: bold; font-size: 22px; border-bottom: 2px solid #059669; padding-bottom: 10px;">
+       <span>المبلغ المدفوع:</span>
+       <span>${inv.paid_amount.toFixed(2)} ${storeSettings.currency}</span>
+    </div>
     
-    <div style="margin-top:10px; padding:8px; background:#f9fafb; border-radius:8px; border:1px solid #eee;">
-      <div style="font-size:11px; color:#64748b; margin-bottom:4px; border-bottom:1px solid #eee; padding-bottom:2px; text-align:right;">تفاصيل الدفع:</div>
-      ${inv.paid_cash > 0 ? `<div class="summary-row" style="font-size:11px;"><span>💵 كاش:</span><span>${inv.paid_cash.toFixed(2)}</span></div>` : ''}
-      ${inv.paid_visa > 0 ? `<div class="summary-row" style="font-size:11px;"><span>💳 فيزا:</span><span>${inv.paid_visa.toFixed(2)}</span></div>` : ''}
-      ${inv.paid_wallet > 0 ? `<div class="summary-row" style="font-size:11px;"><span>📱 محفظة:</span><span>${inv.paid_wallet.toFixed(2)}</span></div>` : ''}
-      ${inv.paid_instapay > 0 ? `<div class="summary-row" style="font-size:11px;"><span>⚡ انستا باي:</span><span>${inv.paid_instapay.toFixed(2)}</span></div>` : ''}
+    <div style="margin-top:15px; padding:12px; background:#f9fafb; border-radius:12px; border:1px solid #eee;">
+      <div style="font-size:12px; color:#64748b; margin-bottom:6px; border-bottom:1px solid #eee; padding-bottom:4px; text-align:right; font-weight:bold;">تفاصيل الدفع:</div>
+      ${inv.paid_cash > 0 ? `<div className="summary-row" style="font-size:13px;"><span>💵 كاش:</span><span>${inv.paid_cash.toFixed(2)}</span></div>` : ''}
+      ${inv.paid_visa > 0 ? `<div className="summary-row" style="font-size:13px;"><span>💳 فيزا:</span><span>${inv.paid_visa.toFixed(2)}</span></div>` : ''}
+      ${inv.paid_wallet > 0 ? `<div className="summary-row" style="font-size:13px;"><span>📱 محفظة:</span><span>${inv.paid_wallet.toFixed(2)}</span></div>` : ''}
+      ${inv.paid_instapay > 0 ? `<div className="summary-row" style="font-size:13px;"><span>⚡ انستا باي:</span><span>${inv.paid_instapay.toFixed(2)}</span></div>` : ''}
     </div>
 
-    ${inv.total - inv.paid_amount > 0 ? `
-      <div class="summary-row" style="color: #dc2626; font-weight: bold; margin-top:10px;"><span>المتبقي للمورد:</span><span>${(inv.total - inv.paid_amount).toFixed(2)} ${storeSettings.currency}</span></div>
+    ${(!isPaymentReceipt && inv.total - inv.paid_amount > 0) ? `
+      <div className="summary-row" style="color: #dc2626; font-weight: bold; margin-top:10px;"><span>المتبقي للمورد:</span><span>${(inv.total - inv.paid_amount).toFixed(2)} ${storeSettings.currency}</span></div>
     ` : ''}
   </div>
+
+  <div className="footer">نظام الكاشير المتقدم - إدارة الموردين والمشتريات</div>
+</div>
 
   <div class="footer">نظام الكاشير المتقدم - إدارة المشتريات والمخازن</div>
 </div>
@@ -614,17 +617,27 @@ export default function Suppliers() {
         const totalDebt = totalPurchases - totalPaid;
 
         const handlePayDebt = async () => {
-          const amount = parseFloat(debtAmount);
-          if (isNaN(amount) || amount <= 0) return alert('أدخل مبلغاً صحيحاً');
-          if (amount > totalDebt) return alert('المبلغ المدخل أكبر من المديونية الحالية');
+          const splitPayments = {
+            cash: parseFloat(debtPaidCash) || 0,
+            visa: parseFloat(debtPaidVisa) || 0,
+            wallet: parseFloat(debtPaidWallet) || 0,
+            instapay: parseFloat(debtPaidInstapay) || 0
+          };
+          const totalPaid = splitPayments.cash + splitPayments.visa + splitPayments.wallet + splitPayments.instapay;
+
+          if (totalPaid <= 0) return alert('أدخل مبلغاً صحيحاً للسداد');
+          if (totalPaid > totalDebt + 0.01) return alert('المبلغ المدخل أكبر من المديونية الحالية');
           
           try {
             setIsPayingDebt(true);
-            await useStore.getState().paySupplierDebt(selectedSupplierProfile.id, amount);
-            alert('تم تسجيل الدفعة بنجاح');
-            setDebtAmount('');
+            await useStore.getState().paySupplierDebt(selectedSupplierProfile.id, totalPaid, splitPayments);
+            alert('تم تسجيل عملية السداد بنجاح');
+            setDebtPaidCash('');
+            setDebtPaidVisa('');
+            setDebtPaidWallet('');
+            setDebtPaidInstapay('');
           } catch (e) {
-            alert('حدث خطأ أثناء الدفع');
+            alert('حدث خطأ أثناء تسجيل السداد');
           } finally {
             setIsPayingDebt(false);
           }
@@ -667,27 +680,44 @@ export default function Suppliers() {
 
                 {/* Pay Debt Section */}
                 {totalDebt > 0 && (
-                  <div className="bg-white p-6 rounded-[32px] border border-red-100 shadow-sm mb-8 flex items-center gap-4">
-                    <div className="flex-1">
-                      <h3 className="font-black text-slate-800 mb-1">تسديد مديونية للمورد</h3>
-                      <p className="text-xs text-slate-500">قم بإدخال المبلغ الذي دفعته للمورد الآن لتسويته من الحساب</p>
+                  <div className="bg-white p-8 rounded-[40px] border-2 border-emerald-100 shadow-xl mb-8 flex flex-col gap-6 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-50 rounded-bl-full -z-0 opacity-50" />
+                    <div className="relative z-10 flex justify-between items-center">
+                      <div>
+                        <h3 className="text-xl font-black text-slate-800 mb-1">تسديد مديونية للمورد</h3>
+                        <p className="text-sm text-slate-500 font-medium">اختر طريقة الدفع ووزع المبالغ المسددة</p>
+                      </div>
+                      <div className="bg-emerald-50 text-emerald-700 px-4 py-2 rounded-2xl font-black text-lg">
+                        إجمالي السداد: {(parseFloat(debtPaidCash || '0') + parseFloat(debtPaidVisa || '0') + parseFloat(debtPaidWallet || '0') + parseFloat(debtPaidInstapay || '0')).toLocaleString()}
+                      </div>
                     </div>
-                    <div className="flex gap-2">
-                      <input 
-                        type="number" 
-                        placeholder="المبلغ" 
-                        value={debtAmount} 
-                        onChange={e => setDebtAmount(e.target.value)}
-                        className="w-32 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 font-bold"
-                      />
-                      <button 
-                        onClick={handlePayDebt}
-                        disabled={isPayingDebt}
-                        className="bg-emerald-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-emerald-700 transition disabled:opacity-50"
-                      >
-                        {isPayingDebt ? 'جاري...' : 'تسديد'}
-                      </button>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 relative z-10">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block pr-2">💵 كاش</label>
+                        <input type="number" dir="ltr" value={debtPaidCash} onChange={e => setDebtPaidCash(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-black text-center" placeholder="0.00" />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block pr-2">💳 فيزا</label>
+                        <input type="number" dir="ltr" value={debtPaidVisa} onChange={e => setDebtPaidVisa(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-black text-center" placeholder="0.00" />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block pr-2">📱 محفظة</label>
+                        <input type="number" dir="ltr" value={debtPaidWallet} onChange={e => setDebtPaidWallet(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-black text-center" placeholder="0.00" />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block pr-2">⚡ انستا باي</label>
+                        <input type="number" dir="ltr" value={debtPaidInstapay} onChange={e => setDebtPaidInstapay(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-black text-center" placeholder="0.00" />
+                      </div>
                     </div>
+
+                    <button 
+                      onClick={handlePayDebt}
+                      disabled={isPayingDebt}
+                      className="w-full bg-emerald-600 text-white py-4 rounded-2xl font-black text-lg shadow-lg shadow-emerald-200 hover:bg-emerald-700 hover:-translate-y-0.5 active:translate-y-0 transition-all disabled:opacity-50 relative z-10"
+                    >
+                      {isPayingDebt ? 'جاري تسجيل السداد...' : 'تأكيد عملية السداد وحفظ الإيصال'}
+                    </button>
                   </div>
                 )}
 
@@ -711,18 +741,24 @@ export default function Suppliers() {
                       {supplierInvoices.length === 0 ? (
                         <tr><td colSpan={6} className="p-10 text-center text-slate-400 font-bold">لا يوجد فواتير سابقة</td></tr>
                       ) : (
-                        supplierInvoices.map(inv => (
-                          <tr key={inv.id} className="hover:bg-slate-50 transition">
-                            <td className="p-4 font-mono font-bold text-slate-800">{inv.invoice_number}</td>
-                            <td className="p-4 text-xs font-medium">{new Date(inv.created_at).toLocaleDateString('ar-SA')}</td>
-                            <td className="p-4 text-center font-bold">{inv.total.toLocaleString()}</td>
-                            <td className="p-4 text-center font-bold text-emerald-600">{inv.paid_amount.toLocaleString()}</td>
-                            <td className="p-4 text-center font-bold text-red-600">{(inv.total - inv.paid_amount).toLocaleString()}</td>
-                            <td className="p-4 text-left">
-                              <button onClick={() => printPurchaseInvoice(inv)} className="p-2 text-slate-400 hover:text-slate-800 transition"><Printer size={16} /></button>
-                            </td>
-                          </tr>
-                        ))
+                        supplierInvoices.map(inv => {
+                          const isPayment = inv.total === 0;
+                          return (
+                            <tr key={inv.id} className={`hover:bg-slate-50 transition ${isPayment ? 'bg-emerald-50/30' : ''}`}>
+                              <td className="p-4 font-mono font-bold text-slate-800">
+                                {inv.invoice_number}
+                                {isPayment && <span className="block text-[10px] text-emerald-600 font-black">إيصال سداد مديونية</span>}
+                              </td>
+                              <td className="p-4 text-xs font-medium">{new Date(inv.created_at).toLocaleDateString('ar-SA')}</td>
+                              <td className="p-4 text-center font-bold">{isPayment ? '—' : inv.total.toLocaleString()}</td>
+                              <td className="p-4 text-center font-bold text-emerald-600">{inv.paid_amount.toLocaleString()}</td>
+                              <td className="p-4 text-center font-bold text-red-600">{isPayment ? '—' : (inv.total - inv.paid_amount).toLocaleString()}</td>
+                              <td className="p-4 text-left">
+                                <button onClick={() => printPurchaseInvoice(inv)} className="p-2 text-slate-400 hover:text-slate-800 transition" title="طباعة"><Printer size={16} /></button>
+                              </td>
+                            </tr>
+                          );
+                        })
                       )}
                     </tbody>
                   </table>

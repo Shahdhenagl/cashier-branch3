@@ -149,12 +149,14 @@ export default function Finance() {
     });
 
     dailyPurchases.forEach(inv => {
+      const supplier = useStore.getState().suppliers.find(s => s.id === inv.supplier_id);
+      const isPayment = inv.total === 0;
       list.push({
         id: inv.id,
-        type: 'شراء بضاعة',
+        type: isPayment ? 'سداد مديونية مورد' : 'شراء بضاعة',
         amount: inv.paid_amount,
         method: inv.payment_method,
-        note: `فاتورة #${inv.invoice_number}`,
+        note: `${supplier?.name || 'مورد'} - #${inv.invoice_number}`,
         isOut: true,
         time: new Date(inv.created_at).toLocaleTimeString('ar-SA'),
         rawDate: inv.created_at

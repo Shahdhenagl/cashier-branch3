@@ -187,7 +187,7 @@ interface CashierStore {
     items: PurchaseItem[],
     splitPayments?: { cash: number; visa: number; wallet: number; instapay: number }
   ) => Promise<void>;
-  paySupplierDebt: (supplierId: string, amount: number) => Promise<void>;
+  paySupplierDebt: (supplierId: string, amount: number, splitPayments?: { cash: number; visa: number; wallet: number; instapay: number }) => Promise<void>;
 
   // Realtime
   setupRealtime: () => void;
