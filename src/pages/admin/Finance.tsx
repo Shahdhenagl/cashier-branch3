@@ -261,19 +261,95 @@ export default function Finance() {
 
   const printTransaction = (t: any) => {
     if (!t.original) return;
-    if (t.originType === 'order') {
-      // Import/Implementation of print order logic
-      const order = t.original;
-      const html = `<html><head><title>Invoice #${order.id}</title></head><body onload="window.print();window.close()"><pre>${JSON.stringify(order, null, 2)}</pre></body></html>`;
-      const pw = window.open('', '_blank');
-      pw?.document.write(html);
-      pw?.document.close();
-    } else if (t.originType === 'purchase') {
-       // We can use a simplified version or the full one if we had it shared.
-       // For now, I'll just alert that they should print from the specific page if complex.
-       // Actually, I'll implement a basic one.
-       alert('يرجى طباعة فواتير المشتريات من صفحة الموردين لضمان تنسيق الـ QR');
-    }
+    const inv = t.original;
+    const isOrder = t.originType === 'order';
+    
+    // Simple helper to generate formatted invoice from Finance
+    const html = `<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8"/>
+<title>${isOrder ? 'فاتورة مبيعات' : 'فاتورة مشتريات'} #${isOrder ? inv.id : inv.invoice_number}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box;font-family:'Cairo', sans-serif;}
+  body{background:#fff;color:#1e293b;padding:15px;}
+  .invoice-card{width:148mm;margin:0 auto;border:1px solid #eee;padding:15px;border-radius:15px;}
+  .header{display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #1e293b;padding-bottom:10px;margin-bottom:15px;}
+  .store-info{font-size:12px;color:#64748b;}
+  .store-name{font-size:22px;font-weight:900;color:#1e293b;}
+  .badge{background:#1e293b;color:#fff;padding:5px 15px;border-radius:6px;font-weight:900;font-size:14px;}
+  
+  .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:15px;background:#f8fafc;padding:10px;border-radius:10px;}
+  .info-item{font-size:11px;}
+  .info-item strong{color:#64748b;}
+  
+  table{width:100%;border-collapse:collapse;margin-bottom:15px;}
+  th{background:#f1f5f9;padding:8px;font-size:11px;text-align:center;border-bottom:2px solid #cbd5e1;}
+  td{padding:8px;font-size:11px;border-bottom:1px solid #f1f5f9;text-align:center;}
+  
+  .summary{margin-right:auto;width:60%;}
+  .sum-row{display:flex;justify-content:space-between;padding:5px 0;font-size:12px;}
+  .sum-total{font-weight:900;font-size:16px;border-top:2px solid #1e293b;padding-top:5px;margin-top:5px;}
+  
+  .footer{text-align:center;font-size:10px;color:#94a3b8;margin-top:20px;border-top:1px dashed #eee;padding-top:10px;}
+  @media print{ @page{size:A5;margin:0;} body{padding:0;} .invoice-card{border:none;width:100%;} }
+</style>
+</head>
+<body>
+<div class="invoice-card">
+  <div class="header">
+    <div>
+      <div class="store-name">${storeSettings.name}</div>
+      <div class="store-info">${storeSettings.address} | ${storeSettings.phone}</div>
+    </div>
+    <div class="badge">${isOrder ? 'فاتورة مبيعات' : (inv.total === 0 ? 'إيصال سداد مورد' : 'فاتورة مشتريات')}</div>
+  </div>
+
+  <div class="info-grid">
+    <div class="info-item"><strong>${isOrder ? 'العميل:' : 'المورد:'}</strong> <span>${isOrder ? (inv.customer?.name || 'عميل نقدي') : (useStore.getState().suppliers.find(s => s.id === inv.supplier_id)?.name || 'مورد')}</span></div>
+    <div class="info-item"><strong>التاريخ:</strong> <span>${new Date(isOrder ? inv.date : inv.created_at).toLocaleString('ar-SA')}</span></div>
+    <div class="info-item"><strong>رقم المستند:</strong> <span>#${isOrder ? inv.id : inv.invoice_number}</span></div>
+    <div class="info-item"><strong>المسؤول:</strong> <span>${isOrder ? (inv.cashier_name || '—') : 'المدير'}</span></div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>المنتج</th>
+        <th>الكمية</th>
+        <th>السعر</th>
+        <th>الإجمالي</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${(inv.items || []).map((item: any) => `
+        <tr>
+          <td style="text-align:right">${item.product_name || useStore.getState().products.find(p => p.id === item.product_id)?.name || 'منتج'}</td>
+          <td>${item.quantity}</td>
+          <td>${(isOrder ? item.sale_price : item.purchase_price).toFixed(2)}</td>
+          <td>${((isOrder ? item.sale_price : item.purchase_price) * item.quantity).toFixed(2)}</td>
+        </tr>
+      `).join('')}
+      ${inv.total === 0 ? '<tr><td colspan="4" style="padding:20px; color:#059669; font-weight:bold;">عملية سداد مديونية للمورد</td></tr>' : ''}
+    </tbody>
+  </table>
+
+  <div class="summary">
+    <div class="sum-row sum-total"><span>الإجمالي:</span><span>${inv.total.toFixed(2)} ${storeSettings.currency}</span></div>
+    <div class="sum-row" style="color:#059669; font-weight:bold;"><span>المدفوع:</span><span>${inv.paid_amount.toFixed(2)} ${storeSettings.currency}</span></div>
+    ${inv.total - inv.paid_amount > 0 ? `<div class="sum-row" style="color:#ef4444; font-weight:bold;"><span>المتبقي:</span><span>${(inv.total - inv.paid_amount).toFixed(2)} ${storeSettings.currency}</span></div>` : ''}
+  </div>
+
+  <div class="footer">نظام الكاشير المتقدم - سجل المالية</div>
+</div>
+<script>window.onload=()=>{setTimeout(()=>{window.print();window.onafterprint=()=>window.close();},500);}<\/script>
+</body>
+</html>`;
+
+    const pw = window.open('', '_blank');
+    pw?.document.write(html);
+    pw?.document.close();
   };
 
   const exportToPDF = async () => {
