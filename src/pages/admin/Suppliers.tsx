@@ -224,7 +224,7 @@ export default function Suppliers() {
   .store-name{font-size:24px;font-weight:900;color:#1e293b;}
   .store-details{font-size:11px;color:#64748b;margin-top:5px;line-height:1.5;}
   
-  .invoice-title-badge{background:#1e293b;color:#fff;padding:8px 20px;border-radius:8px;font-weight:900;font-size:18px;}
+  .invoice-title-badge{background:#1e293b;color:#fff;padding:6px 15px;border-radius:8px;font-weight:900;font-size:14px;white-space:nowrap;}
   
   .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:25px;background:#f8fafc;padding:15px;border-radius:12px;border:1px solid #e2e8f0;}
   .info-item{font-size:13px;display:flex;gap:8px;}
