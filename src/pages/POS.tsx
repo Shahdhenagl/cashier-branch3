@@ -85,18 +85,27 @@ export default function POS() {
       </tr>`
     ).join('');
 
+    const invoiceUrl = `${window.location.origin}/view-invoice/${invId}`;
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(invoiceUrl)}`;
+
     const customerBlock = (orderDetails.customerName || orderDetails.customerPhone || orderDetails.customId)
       ? `<div class="customer-info-grid">
-          <div class="info-item"><strong>اسم العميل:</strong> <span>${orderDetails.customerName || '—'}</span></div>
-          <div class="info-item"><strong>رقم الكارت (ID):</strong> <span dir="ltr">${orderDetails.customId || orderDetails.customerId?.substring(0, 8) || '—'}</span></div>
-          <div class="info-item"><strong>رقم الهاتف:</strong> <span dir="ltr">${orderDetails.customerPhone || '—'}</span></div>
-          <div class="info-item"><strong>رقم الفاتورة:</strong> <span>#${invId}</span></div>
-          <div class="info-item"><strong>التاريخ:</strong> <span>${printDate}</span></div>
+          <div style="grid-column: span 2; display:grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            <div class="info-item"><strong>اسم العميل:</strong> <span>${orderDetails.customerName || '—'}</span></div>
+            <div class="info-item"><strong>رقم الكارت (ID):</strong> <span dir="ltr">${orderDetails.customId || orderDetails.customerId?.substring(0, 8) || '—'}</span></div>
+            <div class="info-item"><strong>رقم الهاتف:</strong> <span dir="ltr">${orderDetails.customerPhone || '—'}</span></div>
+            <div class="info-item"><strong>رقم الفاتورة:</strong> <span>#${invId}</span></div>
+            <div class="info-item"><strong>التاريخ:</strong> <span>${printDate}</span></div>
+          </div>
+          <img class="qr-code-img" src="${qrCodeUrl}" alt="QR Code" />
          </div>`
-      : `<div class="customer-info-grid">
-          <div class="info-item"><strong>اسم العميل:</strong> <span>عميل نقدي</span></div>
-          <div class="info-item"><strong>رقم الفاتورة:</strong> <span>#${invId}</span></div>
-          <div class="info-item"><strong>التاريخ:</strong> <span>${printDate}</span></div>
+      : `<div class="customer-info-grid" style="grid-template-columns: 1fr auto;">
+          <div style="display:grid; grid-template-columns: 1fr; gap: 4px;">
+            <div class="info-item"><strong>اسم العميل:</strong> <span>عميل نقدي</span></div>
+            <div class="info-item"><strong>رقم الفاتورة:</strong> <span>#${invId}</span></div>
+            <div class="info-item"><strong>التاريخ:</strong> <span>${printDate}</span></div>
+          </div>
+          <img class="qr-code-img" src="${qrCodeUrl}" alt="QR Code" />
          </div>`;
 
     const html = `<!DOCTYPE html>
@@ -108,34 +117,35 @@ export default function POS() {
   @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
   *{margin:0;padding:0;box-sizing:border-box;font-family:'Cairo', sans-serif;}
   body{background:#fff;color:#1e293b;padding:0;margin:0;}
-  .invoice-container{width:148mm;min-height:210mm;margin:0 auto;padding:12mm;position:relative;display:flex;flex-direction:column;}
+  .invoice-container{width:148mm;min-height:205mm;margin:0 auto;padding:8mm;position:relative;display:flex;flex-direction:column;gap:10px;}
   
-  .header-main{display:flex;justify-content:space-between;align-items:center;border-bottom:4px solid #1e293b;padding-bottom:15px;margin-bottom:20px;}
-  .store-identity{display:flex;align-items:center;gap:15px;}
-  .logo{width:70px;height:70px;object-fit:contain;border-radius:12px;}
-  .store-name{font-size:24px;font-weight:900;color:#1e293b;line-height:1;}
-  .store-details{font-size:11px;color:#64748b;margin-top:5px;line-height:1.5;}
+  .header-main{display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #1e293b;padding-bottom:10px;margin-bottom:10px;}
+  .store-identity{display:flex;align-items:center;gap:12px;}
+  .logo{width:60px;height:60px;object-fit:contain;border-radius:10px;}
+  .store-name{font-size:20px;font-weight:900;color:#1e293b;line-height:1;}
+  .store-details{font-size:10px;color:#64748b;margin-top:4px;line-height:1.4;}
   
-  .invoice-title-badge{background:#1e293b;color:#fff;padding:8px 20px;border-radius:8px;font-weight:900;font-size:18px;}
+  .invoice-title-badge{background:#1e293b;color:#fff;padding:6px 15px;border-radius:6px;font-weight:900;font-size:16px;}
   
-  .customer-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:25px;background:#f8fafc;padding:15px;border-radius:12px;border:1px solid #e2e8f0;}
-  .info-item{font-size:13px;display:flex;gap:8px;}
+  .customer-info-grid{display:grid;grid-template-columns:1fr auto;gap:8px;margin-bottom:10px;background:#f8fafc;padding:10px;border-radius:10px;border:1px solid #e2e8f0;align-items:center;}
+  .info-item{font-size:12px;display:flex;gap:6px;}
   .info-item strong{color:#64748b;white-space:nowrap;}
   .info-item span{color:#1e293b;font-weight:700;}
   
-  table{width:100%;border-collapse:collapse;margin-bottom:20px;}
-  thead th{background:#f1f5f9;color:#475569;font-size:13px;padding:12px 8px;text-align:center;border-bottom:2px solid #cbd5e1;}
+  .qr-code-img{width:65px;height:65px;padding:4px;background:#fff;border-radius:6px;border:1px solid #e2e8f0;}
+
+  table{width:100%;border-collapse:collapse;margin-bottom:10px;}
+  thead th{background:#f1f5f9;color:#475569;font-size:12px;padding:8px 6px;text-align:center;border-bottom:2px solid #cbd5e1;}
   thead th:nth-child(2){text-align:right;}
   thead th:last-child{text-align:left;}
   
-  .summary-section{margin-right:auto;width:60%;margin-top:auto;}
-  .summary-row{display:flex;justify-content:space-between;padding:8px 0;font-size:14px;border-bottom:1px solid #f1f5f9;}
-  .summary-row.total{border-top:2px solid #1e293b;border-bottom:none;margin-top:5px;font-size:20px;font-weight:900;color:#1e293b;}
+  .summary-section{margin-right:auto;width:60%;margin-top:5px;}
+  .summary-row{display:flex;justify-content:space-between;padding:5px 0;font-size:13px;border-bottom:1px solid #f1f5f9;}
+  .summary-row.total{border-top:2px solid #1e293b;border-bottom:none;margin-top:3px;font-size:18px;font-weight:900;color:#1e293b;}
   
-  .payment-status{margin-top:15px;padding:10px;border-radius:8px;text-align:center;font-weight:bold;font-size:14px;}
+  .payment-status{margin-top:8px;padding:6px;border-radius:6px;text-align:center;font-weight:bold;font-size:13px;}
   .status-paid{background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;}
   .status-debt{background:#fef2f2;color:#dc2626;border:1px solid #fecaca;}
-  .payment-method-badge{margin-top:10px;padding:8px 14px;border-radius:8px;display:inline-flex;align-items:center;gap:8px;font-weight:900;font-size:14px;background:#f0f4ff;color:#4f46e5;border:1px solid #c7d2fe;}
   
   .footer{text-align:center;margin-top:30px;padding-top:15px;border-top:1px dashed #cbd5e1;font-size:12px;color:#94a3b8;font-weight:bold;}
   
