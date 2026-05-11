@@ -172,6 +172,21 @@ export default function Suppliers() {
     }
   };
 
+  const printPurchaseInvoice = (inv: any) => {
+    const supplier = suppliers.find(s => s.id === inv.supplier_id);
+    const itemsHtml = (inv.items || []).map((item: any, index: number) => {
+      const product = products.find(p => p.id === item.product_id);
+      return `
+        <tr>
+          <td style="padding:10px 4px;border-bottom:1px solid #eee;text-align:center;">${index + 1}</td>
+          <td style="padding:10px 4px;border-bottom:1px solid #eee;font-weight:bold;">${product?.name || 'منتج غير معروف'}</td>
+          <td style="padding:10px 4px;border-bottom:1px solid #eee;text-align:center;">${item.quantity}</td>
+          <td style="padding:10px 4px;border-bottom:1px solid #eee;text-align:center;">${item.purchase_price.toFixed(2)}</td>
+          <td style="padding:10px 4px;border-bottom:1px solid #eee;text-align:left;font-weight:black;">${(item.purchase_price * item.quantity).toFixed(2)}</td>
+        </tr>
+      `;
+    }).join('');
+
     const isPaymentReceipt = inv.total === 0;
     const html = `<!DOCTYPE html>
 <html dir="rtl" lang="ar">
@@ -216,23 +231,23 @@ export default function Suppliers() {
 </style>
 </head>
 <body>
-<div className="invoice-container">
-  <div className="header-main">
-    <div className="store-identity">
-      <img className="logo" src="${storeSettings.logo}" onerror="this.style.display='none'" />
+<div class="invoice-container">
+  <div class="header-main">
+    <div class="store-identity">
+      <img class="logo" src="${storeSettings.logo}" onerror="this.style.display='none'" />
       <div>
-        <div className="store-name">${storeSettings.name}</div>
-        <div className="store-details">${storeSettings.address} | ${storeSettings.phone}</div>
+        <div class="store-name">${storeSettings.name}</div>
+        <div class="store-details">${storeSettings.address} | ${storeSettings.phone}</div>
       </div>
     </div>
-    <div className="invoice-title-badge">${isPaymentReceipt ? 'إيصال سداد مورد' : 'فاتورة مشتريات'}</div>
+    <div class="invoice-title-badge">${isPaymentReceipt ? 'إيصال سداد مورد' : 'فاتورة مشتريات'}</div>
   </div>
 
-  <div className="info-grid">
-    <div className="info-item"><strong>المورد:</strong> <span>${supplier?.name || 'مورد محذوف'}</span></div>
-    <div className="info-item"><strong>رقم الهاتف:</strong> <span dir="ltr">${supplier?.phone || '—'}</span></div>
-    <div className="info-item"><strong>رقم المستند:</strong> <span>#${inv.invoice_number}</span></div>
-    <div className="info-item"><strong>التاريخ:</strong> <span>${new Date(inv.created_at).toLocaleString('ar-SA')}</span></div>
+  <div class="info-grid">
+    <div class="info-item"><strong>المورد:</strong> <span>${supplier?.name || 'مورد محذوف'}</span></div>
+    <div class="info-item"><strong>رقم الهاتف:</strong> <span dir="ltr">${supplier?.phone || '—'}</span></div>
+    <div class="info-item"><strong>رقم المستند:</strong> <span>#${inv.invoice_number}</span></div>
+    <div class="info-item"><strong>التاريخ:</strong> <span>${new Date(inv.created_at).toLocaleString('ar-SA')}</span></div>
   </div>
 
   ${!isPaymentReceipt ? `
@@ -253,30 +268,27 @@ export default function Suppliers() {
   </div>
   `}
 
-  <div className="summary-section">
-    ${!isPaymentReceipt ? `<div className="summary-row total"><span>إجمالي الفاتورة:</span><span>${inv.total.toFixed(2)} ${storeSettings.currency}</span></div>` : ''}
-    <div className="summary-row" style="color: #059669; font-weight: bold; font-size: 22px; border-bottom: 2px solid #059669; padding-bottom: 10px;">
+  <div class="summary-section">
+    ${!isPaymentReceipt ? `<div class="summary-row total"><span>إجمالي الفاتورة:</span><span>${inv.total.toFixed(2)} ${storeSettings.currency}</span></div>` : ''}
+    <div class="summary-row" style="color: #059669; font-weight: bold; font-size: 22px; border-bottom: 2px solid #059669; padding-bottom: 10px;">
        <span>المبلغ المدفوع:</span>
        <span>${inv.paid_amount.toFixed(2)} ${storeSettings.currency}</span>
     </div>
     
     <div style="margin-top:15px; padding:12px; background:#f9fafb; border-radius:12px; border:1px solid #eee;">
       <div style="font-size:12px; color:#64748b; margin-bottom:6px; border-bottom:1px solid #eee; padding-bottom:4px; text-align:right; font-weight:bold;">تفاصيل الدفع:</div>
-      ${inv.paid_cash > 0 ? `<div className="summary-row" style="font-size:13px;"><span>💵 كاش:</span><span>${inv.paid_cash.toFixed(2)}</span></div>` : ''}
-      ${inv.paid_visa > 0 ? `<div className="summary-row" style="font-size:13px;"><span>💳 فيزا:</span><span>${inv.paid_visa.toFixed(2)}</span></div>` : ''}
-      ${inv.paid_wallet > 0 ? `<div className="summary-row" style="font-size:13px;"><span>📱 محفظة:</span><span>${inv.paid_wallet.toFixed(2)}</span></div>` : ''}
-      ${inv.paid_instapay > 0 ? `<div className="summary-row" style="font-size:13px;"><span>⚡ انستا باي:</span><span>${inv.paid_instapay.toFixed(2)}</span></div>` : ''}
+      ${inv.paid_cash > 0 ? `<div class="summary-row" style="font-size:13px;"><span>💵 كاش:</span><span>${inv.paid_cash.toFixed(2)}</span></div>` : ''}
+      ${inv.paid_visa > 0 ? `<div class="summary-row" style="font-size:13px;"><span>💳 فيزا:</span><span>${inv.paid_visa.toFixed(2)}</span></div>` : ''}
+      ${inv.paid_wallet > 0 ? `<div class="summary-row" style="font-size:13px;"><span>📱 محفظة:</span><span>${inv.paid_wallet.toFixed(2)}</span></div>` : ''}
+      ${inv.paid_instapay > 0 ? `<div class="summary-row" style="font-size:13px;"><span>⚡ انستا باي:</span><span>${inv.paid_instapay.toFixed(2)}</span></div>` : ''}
     </div>
 
     ${(!isPaymentReceipt && inv.total - inv.paid_amount > 0) ? `
-      <div className="summary-row" style="color: #dc2626; font-weight: bold; margin-top:10px;"><span>المتبقي للمورد:</span><span>${(inv.total - inv.paid_amount).toFixed(2)} ${storeSettings.currency}</span></div>
+      <div class="summary-row" style="color: #dc2626; font-weight: bold; margin-top:10px;"><span>المتبقي للمورد:</span><span>${(inv.total - inv.paid_amount).toFixed(2)} ${storeSettings.currency}</span></div>
     ` : ''}
   </div>
 
-  <div className="footer">نظام الكاشير المتقدم - إدارة الموردين والمشتريات</div>
-</div>
-
-  <div class="footer">نظام الكاشير المتقدم - إدارة المشتريات والمخازن</div>
+  <div class="footer">نظام الكاشير المتقدم - إدارة الموردين والمشتريات</div>
 </div>
 <script>window.onload=()=>{setTimeout(()=>{window.print();window.onafterprint=()=>window.close();},500);}<\/script>
 </body></html>`;
