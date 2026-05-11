@@ -262,7 +262,13 @@ export default function POS() {
     const effectivePaidAmount = isAllEmpty ? currentTotal : (finalPaidAmount - change);
     const finalSplit = isAllEmpty ? { ...adjustedSplit, cash: currentTotal } : adjustedSplit;
     
-    const primaryMethod = finalSplit.cash >= finalSplit.visa ? 'cash' : 'visa';
+    const methods = [
+      { name: 'cash', amount: finalSplit.cash },
+      { name: 'visa', amount: finalSplit.visa },
+      { name: 'wallet', amount: finalSplit.wallet },
+      { name: 'instapay', amount: finalSplit.instapay }
+    ];
+    const primaryMethod = methods.sort((a, b) => b.amount - a.amount)[0].name;
 
     if (effectivePaidAmount < currentTotal && (!currentCustomerName.trim() || !currentCustomerPhone.trim())) {
       alert("عذراً، يجب تسجيل اسم ورقم هاتف العميل بالكامل (الاسم والموبايل) في حالة البيع بالآجل لحفظ المديونية.");

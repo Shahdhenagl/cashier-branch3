@@ -100,7 +100,13 @@ export default function Suppliers() {
         cash: Math.max(0, splitPayments.cash - change)
       };
 
-      const primaryMethod = adjustedSplit.cash >= adjustedSplit.visa ? 'cash' : 'visa';
+      const methods = [
+        { name: 'cash', amount: adjustedSplit.cash },
+        { name: 'visa', amount: adjustedSplit.visa },
+        { name: 'wallet', amount: adjustedSplit.wallet },
+        { name: 'instapay', amount: adjustedSplit.instapay }
+      ];
+      const primaryMethod = methods.sort((a, b) => b.amount - a.amount)[0].name;
       const effectivePaidAmount = finalPaidAmount - change;
 
       const invoiceNumber = `PO-${Date.now()}`;
