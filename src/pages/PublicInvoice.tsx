@@ -45,6 +45,7 @@ export default function PublicInvoice() {
           payment_method: o.payment_method,
           date: o.created_at,
           items,
+          cashier_name: o.cashier_name,
           customer: o.customers ? { 
             id: o.customers.id, 
             name: o.customers.name, 
@@ -157,6 +158,11 @@ export default function PublicInvoice() {
                 {isPayment ? 'إيصال سداد' : 'فاتورة بيع'}
               </div>
               <div className="text-slate-400 font-mono text-sm font-bold">#{order.id}</div>
+              {order.cashier_name && (
+                <div className="text-[10px] text-slate-400 font-bold bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
+                  المحاسب: {order.cashier_name}
+                </div>
+              )}
             </div>
           </div>
 
@@ -176,13 +182,17 @@ export default function PublicInvoice() {
                   <span className="text-[10px] text-slate-400 font-mono">{new Date(order.date).toLocaleDateString('ar-SA')}</span>
                 </div>
                 <div className="flex justify-between items-center">
+                  <span className="text-xs font-bold text-slate-600">التاريخ:</span>
+                  <span className="text-[13px] font-black text-slate-800">{new Date(order.date).toLocaleDateString('ar-EG', { calendar: 'gregory', day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
+                </div>
+                <div className="flex justify-between items-center">
                   <span className="text-xs font-bold text-slate-600">التوقيت:</span>
-                  <span className="text-xs font-black text-slate-800">{new Date(order.date).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}</span>
+                  <span className="text-[13px] font-black text-slate-800">{new Date(order.date).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
                 {order.customer?.custom_id && (
                   <div className="flex justify-between items-center">
                     <span className="text-xs font-bold text-slate-600">رقم الكارت:</span>
-                    <span className="text-xs font-black text-indigo-600 font-mono">{order.customer.custom_id}</span>
+                    <span className="text-[13px] font-black text-indigo-600 font-mono">{order.customer.custom_id}</span>
                   </div>
                 )}
              </div>

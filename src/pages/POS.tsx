@@ -74,7 +74,7 @@ export default function POS() {
 
   const printInvoice = (invId: string, orderDetails: any) => {
     const currentSettings = { ...storeSettings };
-    const printDate = new Date().toLocaleString('ar-SA');
+    const printDate = new Date().toLocaleString('ar-EG', { calendar: 'gregory', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
     const itemsHtml = orderDetails.cart.map((item: any, index: number) =>
       `<tr>
         <td style="padding:10px 4px;border-bottom:1px solid #eee;text-align:center;font-weight:bold;color:#666;">${index + 1}</td>

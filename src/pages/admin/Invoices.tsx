@@ -15,7 +15,7 @@ export default function Invoices() {
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
 
   const handlePrint = (order: any) => {
-    const printDate = new Date(order.date).toLocaleString('ar-SA');
+    const printDate = new Date(order.created_at || Date.now()).toLocaleString('ar-EG', { calendar: 'gregory', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
     const isPayment = order.type === 'payment';
     const subtotal = order.items.reduce((sum: number, item: any) => sum + (item.sale_price * item.quantity), 0);
     const discountValue = Math.max(0, subtotal - order.total);
