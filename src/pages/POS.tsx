@@ -248,19 +248,28 @@ export default function POS() {
     };
 
     const finalPaidAmount = splitPayments.cash + splitPayments.visa + splitPayments.wallet + splitPayments.instapay;
+    
+    // Handle overpayment (Change)
+    const change = Math.max(0, finalPaidAmount - currentTotal);
+    
+    // Adjust cash payment to exclude change (so treasury is correct)
+    const adjustedSplit = {
+      ...splitPayments,
+      cash: Math.max(0, splitPayments.cash - change)
+    };
 
-    // If all fields are empty, assume full payment in cash
     const isAllEmpty = !paidCash && !paidVisa && !paidWallet && !paidInstapay;
-    const effectivePaidAmount = isAllEmpty ? currentTotal : finalPaidAmount;
-    const effectiveSplit = isAllEmpty ? { ...splitPayments, cash: currentTotal } : splitPayments;
-    const primaryMethod = effectiveSplit.cash >= effectiveSplit.visa ? 'cash' : 'visa';
+    const effectivePaidAmount = isAllEmpty ? currentTotal : (finalPaidAmount - change);
+    const finalSplit = isAllEmpty ? { ...adjustedSplit, cash: currentTotal } : adjustedSplit;
+    
+    const primaryMethod = finalSplit.cash >= finalSplit.visa ? 'cash' : 'visa';
 
     if (effectivePaidAmount < currentTotal && (!currentCustomerName.trim() || !currentCustomerPhone.trim())) {
       alert("عذراً، يجب تسجيل اسم ورقم هاتف العميل بالكامل (الاسم والموبايل) في حالة البيع بالآجل لحفظ المديونية.");
       return;
     }
 
-    const invoiceId = await checkout(currentTotal, { name: currentCustomerName, phone: currentCustomerPhone, custom_id: currentCustomId }, effectivePaidAmount, 'sale', primaryMethod, effectiveSplit);
+    const invoiceId = await checkout(currentTotal, { name: currentCustomerName, phone: currentCustomerPhone, custom_id: currentCustomId }, effectivePaidAmount, 'sale', primaryMethod, finalSplit);
 
     const details: any = {
       cart: currentCart,
@@ -269,7 +278,7 @@ export default function POS() {
       tax: currentTax,
       total: currentTotal,
       paidAmount: effectivePaidAmount,
-      splitPayments: effectiveSplit,
+      splitPayments: finalSplit,
       customerName: currentCustomerName,
       customerPhone: currentCustomerPhone,
       customId: currentCustomId,
@@ -939,18 +948,25 @@ export default function POS() {
               {/* Summary Bar */}
               <div className="bg-slate-100 dark:bg-slate-900 p-4 rounded-2xl flex justify-between items-center">
                 <div className="text-right">
-                  <span className="text-[10px] text-slate-400 block font-bold uppercase">المدفوع حالياً</span>
+                  <span className="text-[10px] text-slate-400 block font-bold uppercase">إجمالي المدفوع</span>
                   <span className="text-lg font-black text-slate-700 dark:text-slate-200">
-                    {((parseFloat(paidCash || '0') + parseFloat(paidVisa || '0') + parseFloat(paidWallet || '0') + parseFloat(paidInstapay || '0'))).toFixed(2)}
+                    {(parseFloat(paidCash || '0') + parseFloat(paidVisa || '0') + parseFloat(paidWallet || '0') + parseFloat(paidInstapay || '0')).toFixed(2)}
                   </span>
                 </div>
-                <div className="h-8 w-px bg-slate-200 dark:bg-slate-700"></div>
-                <div className="text-left">
-                  <span className="text-[10px] text-slate-400 block font-bold uppercase">
-                    {total - (parseFloat(paidCash || '0') + parseFloat(paidVisa || '0') + parseFloat(paidWallet || '0') + parseFloat(paidInstapay || '0')) > 0 ? 'متبقي (آجل)' : 'الباقي'}
-                  </span>
-                  <div className={`text-xl font-black ${total - (parseFloat(paidCash || '0') + parseFloat(paidVisa || '0') + parseFloat(paidWallet || '0') + parseFloat(paidInstapay || '0')) > 0 ? 'text-red-500' : 'text-emerald-600'}`}>
-                    {Math.abs(total - (parseFloat(paidCash || '0') + parseFloat(paidVisa || '0') + parseFloat(paidWallet || '0') + parseFloat(paidInstapay || '0'))).toFixed(2)}
+                
+                <div className="flex gap-6">
+                  <div className="text-center">
+                    <span className="text-[10px] text-slate-400 block font-bold uppercase">المتبقي (آجل)</span>
+                    <span className={`text-lg font-black ${total - (parseFloat(paidCash || '0') + parseFloat(paidVisa || '0') + parseFloat(paidWallet || '0') + parseFloat(paidInstapay || '0')) > 0 ? 'text-red-500' : 'text-slate-400'}`}>
+                      {Math.max(0, total - (parseFloat(paidCash || '0') + parseFloat(paidVisa || '0') + parseFloat(paidWallet || '0') + parseFloat(paidInstapay || '0'))).toFixed(2)}
+                    </span>
+                  </div>
+
+                  <div className="text-left">
+                    <span className="text-[10px] text-slate-400 block font-bold uppercase">الباقي (للعميل)</span>
+                    <span className={`text-lg font-black ${(parseFloat(paidCash || '0') + parseFloat(paidVisa || '0') + parseFloat(paidWallet || '0') + parseFloat(paidInstapay || '0')) - total > 0 ? 'text-emerald-500' : 'text-slate-400'}`}>
+                      {Math.max(0, (parseFloat(paidCash || '0') + parseFloat(paidVisa || '0') + parseFloat(paidWallet || '0') + parseFloat(paidInstapay || '0')) - total).toFixed(2)}
+                    </span>
                   </div>
                 </div>
               </div>

@@ -90,16 +90,27 @@ export default function Suppliers() {
       };
 
       const finalPaidAmount = splitPayments.cash + splitPayments.visa + splitPayments.wallet + splitPayments.instapay;
-      const primaryMethod = splitPayments.cash >= splitPayments.visa ? 'cash' : 'visa';
+      
+      // Handle overpayment (Change)
+      const change = Math.max(0, finalPaidAmount - invTotal);
+      
+      // Adjust cash to exclude change
+      const adjustedSplit = {
+        ...splitPayments,
+        cash: Math.max(0, splitPayments.cash - change)
+      };
+
+      const primaryMethod = adjustedSplit.cash >= adjustedSplit.visa ? 'cash' : 'visa';
+      const effectivePaidAmount = finalPaidAmount - change;
 
       const invoiceNumber = `PO-${Date.now()}`;
       await addPurchaseInvoice({
         invoice_number: invoiceNumber,
         supplier_id: invSupplierId,
         total: invTotal,
-        paid_amount: finalPaidAmount,
+        paid_amount: effectivePaidAmount,
         payment_method: primaryMethod as any,
-      }, items, splitPayments);
+      }, items, adjustedSplit);
 
       alert('تم حفظ الفاتورة بنجاح وتحديث المخزن');
       setShowInvoiceModal(false);
@@ -632,18 +643,32 @@ export default function Suppliers() {
                 </div>
 
                 {/* Summary */}
-                <div className="rounded-2xl p-4 border" style={{ backgroundColor: tc + '10', borderColor: tc + '30' }}>
-                  <div className="flex justify-between font-bold text-slate-700 text-sm mb-1">
-                    <span>إجمالي الفاتورة</span><span>{invTotal.toLocaleString()} {storeSettings.currency}</span>
+                <div className="rounded-2xl p-5 border shadow-inner" style={{ backgroundColor: tc + '08', borderColor: tc + '20' }}>
+                  <div className="flex justify-between font-black text-slate-800 text-lg mb-3 pb-3 border-b border-white">
+                    <span>إجمالي الفاتورة</span>
+                    <span>{invTotal.toLocaleString()} {storeSettings.currency}</span>
                   </div>
-                  <div className="flex justify-between text-sm text-emerald-600 font-bold">
-                    <span>إجمالي المدفوع</span><span>{((parseFloat(invPaidCash || '0') + parseFloat(invPaidVisa || '0') + parseFloat(invPaidWallet || '0') + parseFloat(invPaidInstapay || '0'))).toLocaleString()}</span>
-                  </div>
-                  {invTotal - (parseFloat(invPaidCash || '0') + parseFloat(invPaidVisa || '0') + parseFloat(invPaidWallet || '0') + parseFloat(invPaidInstapay || '0')) > 0 && (
-                    <div className="flex justify-between text-sm text-red-500 font-bold">
-                      <span>المتبقي للمورد</span><span>{(invTotal - (parseFloat(invPaidCash || '0') + parseFloat(invPaidVisa || '0') + parseFloat(invPaidWallet || '0') + parseFloat(invPaidInstapay || '0'))).toLocaleString()}</span>
+                  
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm text-slate-500 font-bold">
+                      <span>إجمالي المدفوع</span>
+                      <span className="text-slate-800">{(parseFloat(invPaidCash || '0') + parseFloat(invPaidVisa || '0') + parseFloat(invPaidWallet || '0') + parseFloat(invPaidInstapay || '0')).toLocaleString()}</span>
                     </div>
-                  )}
+
+                    <div className="flex justify-between text-sm font-bold">
+                      <span className="text-slate-500">متبقي للمورد (آجل)</span>
+                      <span className={invTotal - (parseFloat(invPaidCash || '0') + parseFloat(invPaidVisa || '0') + parseFloat(invPaidWallet || '0') + parseFloat(invPaidInstapay || '0')) > 0 ? 'text-red-500' : 'text-slate-400'}>
+                        {Math.max(0, invTotal - (parseFloat(invPaidCash || '0') + parseFloat(invPaidVisa || '0') + parseFloat(invPaidWallet || '0') + parseFloat(invPaidInstapay || '0'))).toLocaleString()}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between text-sm font-bold">
+                      <span className="text-slate-500">الباقي (مسترد)</span>
+                      <span className={(parseFloat(invPaidCash || '0') + parseFloat(invPaidVisa || '0') + parseFloat(invPaidWallet || '0') + parseFloat(invPaidInstapay || '0')) - invTotal > 0 ? 'text-emerald-600' : 'text-slate-400'}>
+                        {Math.max(0, (parseFloat(invPaidCash || '0') + parseFloat(invPaidVisa || '0') + parseFloat(invPaidWallet || '0') + parseFloat(invPaidInstapay || '0')) - invTotal).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
