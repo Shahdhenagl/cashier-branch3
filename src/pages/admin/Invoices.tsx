@@ -21,17 +21,41 @@ export default function Invoices() {
     const discountValue = Math.max(0, subtotal - order.total);
     const taxValue = Math.max(0, order.total - (subtotal - discountValue));
     
+    // Calculate debt history for this customer if it's a payment receipt
+    let debtInfo = { before: 0, after: 0 };
+    if (isPayment && order.customer) {
+      const customerOrders = orders.filter(o => o.customer?.id === order.customer.id);
+      // Sort by date to calculate historical balance correctly
+      const sortedOrders = [...customerOrders].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      const currentIndex = sortedOrders.findIndex(o => o.id === order.id);
+      
+      // Debt BEFORE this payment = sum of (total - paid) for all orders BEFORE this one
+      const balanceBefore = sortedOrders.slice(0, currentIndex).reduce((sum, o) => {
+        const returnedValue = o.items.reduce((s, i) => s + (i.returned_quantity * i.sale_price), 0);
+        const effectiveTotal = o.type === 'payment' ? 0 : (o.total - returnedValue);
+        return sum + (effectiveTotal - o.paid_amount);
+      }, 0);
+      
+      debtInfo = {
+        before: balanceBefore,
+        after: balanceBefore - order.paid_amount
+      };
+    }
+
     let itemsHtml = '';
     if (isPayment) {
       itemsHtml = `<tr>
-        <td colspan="2" style="padding:12px 4px;border-bottom:1px dashed #ddd;font-size:14px;font-weight:bold;">سداد مديونية سابقة</td>
+        <td style="text-align:center">1</td>
+        <td colspan="3" style="padding:12px 4px;border-bottom:1px dashed #ddd;font-size:14px;font-weight:bold;text-align:right;">سداد مديونية سابقة</td>
         <td style="padding:12px 4px;border-bottom:1px dashed #ddd;text-align:left;font-size:14px;font-weight:bold;">${order.paid_amount.toFixed(2)}</td>
       </tr>`;
     } else {
-      itemsHtml = order.items.map((item: any) =>
+      itemsHtml = order.items.map((item: any, idx: number) =>
         `<tr>
-          <td style="padding:6px 4px;border-bottom:1px dashed #ddd;font-size:13px;">${item.name}${item.returned_quantity > 0 ? ` <span style="color:red;font-size:10px;">(مرتجع: ${item.returned_quantity})</span>` : ''}</td>
+          <td style="text-align:center">${idx + 1}</td>
+          <td style="padding:6px 4px;border-bottom:1px dashed #ddd;font-size:13px;text-align:right;">${item.name}${item.returned_quantity > 0 ? ` <span style="color:red;font-size:10px;">(مرتجع: ${item.returned_quantity})</span>` : ''}</td>
           <td style="padding:6px 4px;border-bottom:1px dashed #ddd;text-align:center;font-size:13px;">${item.quantity}</td>
+          <td style="padding:6px 4px;border-bottom:1px dashed #ddd;text-align:center;font-size:13px;">${item.sale_price.toFixed(2)}</td>
           <td style="padding:6px 4px;border-bottom:1px dashed #ddd;text-align:left;font-size:13px;">${(item.sale_price * item.quantity).toFixed(2)}</td>
         </tr>`
       ).join('');
@@ -80,7 +104,7 @@ export default function Invoices() {
     thead th:nth-child(2){text-align:right;}
     thead th:last-child{text-align:left;}
     
-    .summary-section{margin-right:auto;width:60%;margin-top:auto;}
+    .summary-section{margin-right:auto;width:65%;margin-top:auto;}
     .summary-row{display:flex;justify-content:space-between;padding:8px 0;font-size:14px;border-bottom:1px solid #f1f5f9;}
     .summary-row.total{border-top:2px solid #1e293b;border-bottom:none;margin-top:5px;font-size:20px;font-weight:900;color:#1e293b;}
     
@@ -121,7 +145,7 @@ export default function Invoices() {
         <th style="width:40px">#</th>
         <th style="text-align:right">${isPayment ? 'البيان' : 'المنتج'}</th>
         <th style="width:60px">${isPayment ? '' : 'الكمية'}</th>
-        <th style="width:80px">السعر</th>
+        <th style="width:80px">${isPayment ? '' : 'السعر'}</th>
         <th style="width:100px;text-align:left">الإجمالي</th>
       </tr></thead>
       <tbody>${itemsHtml}</tbody>
@@ -132,8 +156,20 @@ export default function Invoices() {
       <div class="summary-row"><span>المجموع الفرعي:</span><span>${subtotal.toFixed(2)} ${storeSettings.currency}</span></div>
       <div class="summary-row"><span>الضريبة (${storeSettings.taxRate}%):</span><span>${taxValue.toFixed(2)} ${storeSettings.currency}</span></div>
       <div class="summary-row total"><span>الإجمالي النهائي:</span><span>${order.total.toFixed(2)} ${storeSettings.currency}</span></div>
-      ` : ''}
+      ` : `
       <div class="summary-row" style="margin-top:4px;color:#059669;font-weight:bold;"><span>المبلغ المدفوع:</span><span>${order.paid_amount.toFixed(2)} ${storeSettings.currency}</span></div>
+      
+      <div style="margin-top:10px; padding:10px; background:#f0f9ff; border-radius:10px; border:1px solid #bae6fd;">
+        <div style="display:flex; justify-content:space-between; font-size:12px; color:#0369a1; margin-bottom:4px;">
+          <span>المديونية قبل السداد:</span>
+          <strong>${debtInfo.before.toFixed(2)} ${storeSettings.currency}</strong>
+        </div>
+        <div class="debt-info-line" style="color:#c2410c; margin-top:5px; border-top:1px dashed #bae6fd; padding-top:5px;">
+          <span>المديونية المتبقية:</span>
+          <strong style="font-size:16px;">${Math.max(0, debtInfo.after).toFixed(2)} ${storeSettings.currency}</strong>
+        </div>
+      </div>
+      `}
       
       <div style="margin-top:10px; padding:8px; background:#f9fafb; border-radius:8px; border:1px solid #eee;">
         <div style="font-size:11px; color:#64748b; margin-bottom:4px; border-bottom:1px solid #eee; padding-bottom:2px; text-align:right;">تفاصيل الدفع:</div>
