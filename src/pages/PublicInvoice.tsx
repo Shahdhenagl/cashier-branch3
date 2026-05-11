@@ -100,12 +100,12 @@ export default function PublicInvoice() {
         // Try Purchase Invoices if not found in orders
         const { data: inv } = await supabase
           .from('purchase_invoices')
-          .select('*, suppliers(*), purchase_invoice_items(*, products(*))')
-          .eq('id', id)
+          .select('*, suppliers(*), purchase_items(*, products(*))')
+          .or(`id.eq.${id},invoice_number.eq.${id}`)
           .maybeSingle();
 
         if (inv) {
-          const itemRows = (inv.purchase_invoice_items as any[]) ?? [];
+          const itemRows = (inv.purchase_items as any[]) ?? [];
           const items = itemRows.map((i: any) => ({
             id: i.product_id,
             name: i.products?.name || 'منتج غير معروف',
