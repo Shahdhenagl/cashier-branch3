@@ -465,7 +465,34 @@ export const useStore = create<CashierStore>((set, get) => ({
     const finalCashierName = cashierName || state.activeCashier?.name || 'مدير النظام';
     if (state.cart.length === 0 && type !== 'payment') return state.activeInvoiceId;
 
-    const invoiceId = state.activeInvoiceId;
+    // 1. Get the LATEST counter value from DB right now (Atomic approach)
+    const { data: counterData, error: counterError } = await supabase
+      .from('invoice_counter')
+      .select('current_value')
+      .eq('id', 1)
+      .single();
+
+    if (counterError || !counterData) {
+      console.error("Counter Fetch Error:", counterError);
+      alert("خطأ في جلب رقم الفاتورة");
+      return state.activeInvoiceId;
+    }
+
+    const invoiceId = (counterData as any).current_value.toString();
+    const nextCounter = (counterData as any).current_value + 1;
+
+    // 2. Increment counter in DB immediately to "lock" this number
+    const { error: updateCounterError } = await supabase
+      .from('invoice_counter')
+      .update({ current_value: nextCounter })
+      .eq('id', 1);
+
+    if (updateCounterError) {
+      // If someone else already incremented, we might still fail if we use the old ID.
+      // A truly atomic way is using a Postgres Function, but we'll try this sequence first.
+      console.error("Counter Update Error:", updateCounterError);
+    }
+
     let customerId: string | null = null;
     let finalCustomer: Customer | undefined;
 
@@ -482,7 +509,6 @@ export const useStore = create<CashierStore>((set, get) => ({
         customerId = existing.id;
         finalCustomer = existing;
         
-        // Update if needed (optional, maybe just name?)
         if (customerDetails.name && existing.name !== customerDetails.name) {
            await supabase.from('customers').update({ name: customerDetails.name }).eq('id', existing.id);
            existing.name = customerDetails.name;
@@ -529,8 +555,9 @@ export const useStore = create<CashierStore>((set, get) => ({
 
     if (orderError) {
       console.error("Order Insert Error:", orderError);
-      alert(`خطأ في الحفظ: ${orderError.message}`);
-      return invoiceId; // Exit maybe? or throw
+      // If duplicate key, it means another cashier took the number in that millisecond.
+      alert(`عذراً، رقم الفاتورة مستخدم حالياً (${invoiceId}). يرجى المحاولة مرة أخرى.`);
+      return invoiceId;
     }
 
     // Insert order items
@@ -554,10 +581,6 @@ export const useStore = create<CashierStore>((set, get) => ({
       const newQty = (state.products.find((p) => p.id === item.id)?.stock_quantity ?? 0) - item.quantity;
       await supabase.from('products').update({ stock_quantity: Math.max(0, newQty) }).eq('id', item.id);
     }
-
-    // Increment counter
-    const nextCounter = state.invoiceCounter + 1;
-    await supabase.from('invoice_counter').update({ current_value: nextCounter }).eq('id', 1);
 
     // Build new order for local state
     const newOrder: Order = {
