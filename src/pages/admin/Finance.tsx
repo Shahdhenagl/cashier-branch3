@@ -354,9 +354,6 @@ export default function Finance() {
 <script>window.onload=()=>{setTimeout(()=>{window.print();window.onafterprint=()=>window.close();},500);}<\/script>
 </body>
 </html>`;
-<script>window.onload=()=>{setTimeout(()=>{window.print();window.onafterprint=()=>window.close();},500);}<\/script>
-</body>
-</html>`;
 
     const pw = window.open('', '_blank');
     pw?.document.write(html);
