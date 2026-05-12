@@ -35,6 +35,8 @@ export default function Employees() {
     paid_wallet: '',
     paid_instapay: '',
     month: new Date().toISOString().slice(0, 7),
+    dedDays: '',
+    dedAmount: '',
     note: ''
   });
 
@@ -111,6 +113,8 @@ export default function Employees() {
       paid_wallet: '',
       paid_instapay: '',
       month: currentMonth,
+      dedDays: '',
+      dedAmount: '',
       note: type === 'salary' ? `راتب شهر ${currentMonth}` : ''
     });
     setShowTransModal(true);
@@ -135,6 +139,7 @@ export default function Employees() {
       paid_wallet: wallet,
       paid_instapay: insta,
       month: transFormData.month,
+      deductions: (parseFloat(transFormData.dedAmount) || 0) + ((parseFloat(transFormData.dedDays) || 0) * (selectedEmployee!.monthly_salary / 30)),
       note: transFormData.note
     });
 
@@ -294,8 +299,17 @@ export default function Employees() {
                           {t.paid_instapay > 0 && <span className="text-[10px] font-black text-amber-600 flex items-center gap-1"><Zap size={12} /> انستا: {t.paid_instapay.toLocaleString()}</span>}
                         </div>
                       </td>
-                      <td className="p-6 text-left font-black text-lg text-slate-800">
-                        {t.amount.toLocaleString()} <span className="text-xs font-normal text-slate-400">{storeSettings.currency}</span>
+                      <td className="p-6 text-left">
+                        <div className="flex flex-col items-left">
+                          <span className="font-black text-lg text-slate-800">
+                            {t.amount.toLocaleString()} <span className="text-xs font-normal text-slate-400">{storeSettings.currency}</span>
+                          </span>
+                          {t.deductions > 0 && (
+                            <span className="text-[10px] font-bold text-red-500">
+                              خصومات: -{t.deductions.toLocaleString()}
+                            </span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -396,6 +410,62 @@ export default function Employees() {
                   <div>
                     <p className="text-[10px] font-bold text-red-400 uppercase">سلف الشهر (خصم)</p>
                     <p className="text-lg font-black text-red-600">-{getMonthlyAdvances(selectedEmployee!.id, transFormData.month).toLocaleString()} {storeSettings.currency}</p>
+                  </div>
+                </div>
+              )}
+
+              {transType === 'salary' && (
+                <div className="space-y-4 bg-slate-50 p-6 rounded-[24px] border border-slate-100">
+                  <p className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                    <Trash2 size={16} className="text-red-500" /> تطبيق خصومات إضافية
+                  </p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 mb-1">بعدد الأيام</label>
+                      <input 
+                        type="number" 
+                        placeholder="0 يوم"
+                        className="w-full bg-white border border-slate-200 rounded-xl p-3 outline-none font-bold" 
+                        value={transFormData.dedDays} 
+                        onChange={e => {
+                          const days = e.target.value;
+                          const dailyRate = selectedEmployee!.monthly_salary / 30;
+                          const totalDed = (parseFloat(days) || 0) * dailyRate + (parseFloat(transFormData.dedAmount) || 0);
+                          const advances = getMonthlyAdvances(selectedEmployee!.id, transFormData.month);
+                          const net = Math.max(0, selectedEmployee!.monthly_salary - advances - totalDed);
+                          setTransFormData({
+                            ...transFormData, 
+                            dedDays: days,
+                            amount: net.toFixed(2),
+                            paid_cash: net.toFixed(2),
+                            paid_visa: '', paid_wallet: '', paid_instapay: ''
+                          });
+                        }} 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 mb-1">بمبلغ محدد</label>
+                      <input 
+                        type="number" 
+                        placeholder="0.00"
+                        className="w-full bg-white border border-slate-200 rounded-xl p-3 outline-none font-bold" 
+                        value={transFormData.dedAmount} 
+                        onChange={e => {
+                          const amt = e.target.value;
+                          const dailyRate = selectedEmployee!.monthly_salary / 30;
+                          const totalDed = (parseFloat(transFormData.dedDays) || 0) * dailyRate + (parseFloat(amt) || 0);
+                          const advances = getMonthlyAdvances(selectedEmployee!.id, transFormData.month);
+                          const net = Math.max(0, selectedEmployee!.monthly_salary - advances - totalDed);
+                          setTransFormData({
+                            ...transFormData, 
+                            dedAmount: amt,
+                            amount: net.toFixed(2),
+                            paid_cash: net.toFixed(2),
+                            paid_visa: '', paid_wallet: '', paid_instapay: ''
+                          });
+                        }} 
+                      />
+                    </div>
                   </div>
                 </div>
               )}

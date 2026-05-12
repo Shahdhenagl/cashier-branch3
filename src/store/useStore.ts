@@ -134,6 +134,7 @@ export interface EmployeeTransaction {
   paid_wallet: number;
   paid_instapay: number;
   month: string;
+  deductions: number;
   note: string;
   created_at: string;
 }
