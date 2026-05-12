@@ -434,12 +434,25 @@ export default function Finance() {
 
       const imgData = canvas.toDataURL('image/png');
       const pdfWidth = 210; // A4 width in mm
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      const pageHeight = 297; // A4 height in mm
+      const imgHeight = (canvas.height * pdfWidth) / canvas.width;
       
-      // Create PDF with dynamic height to fit all content on one page
-      const pdf = new jsPDF('p', 'mm', [pdfWidth, pdfHeight]);
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      // Add the first page
+      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      // Add subsequent pages if needed
+      while (heightLeft > 0) {
+        position -= pageHeight; // Shift up by one page height
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
       
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
       pdf.save(`finance_report_${selectedDate}.pdf`);
     } catch (e) {
       console.error("PDF Export Error:", e);
