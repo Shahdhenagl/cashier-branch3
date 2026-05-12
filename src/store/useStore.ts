@@ -117,6 +117,7 @@ export interface Employee {
   id: string;
   name: string;
   job_title: string;
+  phone: string;
   working_hours: string;
   monthly_salary: number;
   created_at: string;

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useStore, type Employee } from '../../store/useStore';
 import { 
   Users, Plus, Trash2, Edit3, Search, X, 
-  Wallet, Landmark, CreditCard, Zap,
+  Wallet, Landmark, CreditCard, Zap, Phone,
   DollarSign, Clock, Briefcase
 } from 'lucide-react';
 
@@ -22,6 +22,7 @@ export default function Employees() {
 
   const [empFormData, setEmpFormData] = useState({
     name: '',
+    phone: '',
     job_title: '',
     working_hours: '',
     monthly_salary: ''
@@ -64,13 +65,14 @@ export default function Employees() {
       setEditingEmployee(emp);
       setEmpFormData({
         name: emp.name,
+        phone: emp.phone || '',
         job_title: emp.job_title,
         working_hours: emp.working_hours,
         monthly_salary: emp.monthly_salary.toString()
       });
     } else {
       setEditingEmployee(null);
-      setEmpFormData({ name: '', job_title: '', working_hours: '', monthly_salary: '' });
+      setEmpFormData({ name: '', phone: '', job_title: '', working_hours: '', monthly_salary: '' });
     }
     setShowEmpModal(true);
   };
@@ -80,6 +82,7 @@ export default function Employees() {
     
     const data = {
       name: empFormData.name,
+      phone: empFormData.phone,
       job_title: empFormData.job_title,
       working_hours: empFormData.working_hours,
       monthly_salary: parseFloat(empFormData.monthly_salary) || 0
@@ -209,8 +212,9 @@ export default function Employees() {
                 </div>
 
                 <h3 className="text-xl font-black text-slate-800 mb-1">{emp.name}</h3>
-                <p className="text-slate-500 text-sm font-medium mb-4 flex items-center gap-1">
-                   {emp.job_title || 'بدون مسمى وظيفي'}
+                <p className="text-slate-500 text-sm font-medium mb-4 flex flex-col gap-1">
+                   <span>{emp.job_title || 'بدون مسمى وظيفي'}</span>
+                   {emp.phone && <span className="text-indigo-600 flex items-center gap-1"><Phone size={12} /> {emp.phone}</span>}
                 </p>
 
                 <div className="space-y-3 mb-6">
@@ -321,6 +325,15 @@ export default function Employees() {
                   value={empFormData.name}
                   onChange={e => setEmpFormData({...empFormData, name: e.target.value})}
                   placeholder="مثال: أحمد محمد"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">رقم الهاتف</label>
+                <input 
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 focus:ring-2 focus:ring-indigo-500/20 outline-none font-bold"
+                  value={empFormData.phone}
+                  onChange={e => setEmpFormData({...empFormData, phone: e.target.value})}
+                  placeholder="01xxxxxxxxx"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
