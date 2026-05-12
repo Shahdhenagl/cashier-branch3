@@ -121,7 +121,6 @@ export default function POS() {
   .store-name{font-size:20px;font-weight:900;color:#1e293b;line-height:1;}
   .store-details{font-size:10px;color:#64748b;margin-top:4px;line-height:1.4;}
   
-  .invoice-title-badge{background:#1e293b;color:#fff;padding:6px 15px;border-radius:6px;font-weight:900;font-size:16px;}
   
   .customer-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;background:#f8fafc;padding:10px;border-radius:10px;border:1px solid #e2e8f0;}
   .info-item{font-size:12px;display:flex;gap:6px;}
@@ -168,7 +167,6 @@ export default function POS() {
         </div>
       </div>
     </div>
-    <div class="invoice-title-badge">فاتورة بيع</div>
   </div>
 
   ${customerBlock}
