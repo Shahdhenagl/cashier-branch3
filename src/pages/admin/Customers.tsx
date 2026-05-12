@@ -374,8 +374,8 @@ export default function Customers() {
               />
               <div className="flex gap-6 items-center">
                 <div 
-                  style={{ backgroundColor: storeSettings.themeColor, boxShadow: `0 10px 20px ${storeSettings.themeColor}30` }}
-                  className="w-20 h-20 rounded-3xl flex items-center justify-center text-white text-3xl font-black"
+                  style={{ backgroundColor: storeSettings.themeColor, boxShadow: `0 8px 16px ${storeSettings.themeColor}30` }}
+                  className="w-16 h-16 rounded-2xl flex items-center justify-center text-white text-2xl font-black"
                 >
                   {selectedCustomer.name.charAt(0)}
                 </div>
@@ -403,13 +403,13 @@ export default function Customers() {
                     </div>
                   ) : (
                     <>
-                      <h2 className="text-3xl font-black text-slate-800">{selectedCustomer.name}</h2>
-                      <div className="flex items-center gap-4 mt-2 text-slate-500 font-bold">
-                        <span className="flex items-center gap-1"><CreditCard size={14} /> {selectedCustomer.phone}</span>
-                        <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
-                        <span className="bg-indigo-50 px-2 py-1 rounded-lg text-indigo-600 font-mono font-black border border-indigo-100">ID: {selectedCustomer.custom_id || selectedCustomer.id.substring(0, 8)}</span>
-                        <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
-                        <span>سجل منذ: {new Date(selectedCustomer.timestamp).toLocaleDateString('ar-SA')}</span>
+                      <h2 className="text-2xl font-black text-slate-800">{selectedCustomer.name}</h2>
+                      <div className="flex items-center gap-3 mt-1.5 text-slate-500 font-bold text-xs">
+                        <span className="flex items-center gap-1"><CreditCard size={12} /> {selectedCustomer.phone}</span>
+                        <span className="w-1 h-1 rounded-full bg-slate-300" />
+                        <span className="bg-indigo-50 px-2 py-0.5 rounded-lg text-indigo-600 font-mono font-black border border-indigo-100">ID: {selectedCustomer.custom_id || selectedCustomer.id.substring(0, 8)}</span>
+                        <span className="w-1 h-1 rounded-full bg-slate-300" />
+                        <span className="text-[10px]">سجل منذ: {new Date(selectedCustomer.timestamp).toLocaleDateString('ar-SA')}</span>
                       </div>
                     </>
                   )}
