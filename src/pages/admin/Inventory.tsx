@@ -13,6 +13,7 @@ export default function Inventory() {
   
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     barcode: '',
@@ -158,13 +159,54 @@ export default function Inventory() {
   const exportPDF = async () => {
     const element = document.getElementById('inventory-table');
     if (!element) return;
-    const canvas = await html2canvas(element, { scale: 2 });
-    const imgData = canvas.toDataURL('image/png');
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-    pdf.save(`inventory_report_${new Date().toLocaleDateString()}.pdf`);
+    
+    setLoading(true);
+    
+    try {
+      const canvas = await html2canvas(element, { 
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        windowWidth: element.scrollWidth,
+        windowHeight: element.scrollHeight,
+        onclone: (clonedDoc) => {
+          const el = clonedDoc.getElementById('inventory-table');
+          if (el) {
+            el.style.height = 'auto';
+            el.style.overflow = 'visible';
+          }
+        }
+      });
+      
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = pdfWidth;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      // Add the first page
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pdfHeight;
+
+      // Add additional pages if needed
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pdfHeight;
+      }
+      
+      pdf.save(`inventory_report_${new Date().toLocaleDateString()}.pdf`);
+    } catch (error) {
+      console.error('PDF Export Error:', error);
+      alert('حدث خطأ أثناء تصدير ملف PDF');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -327,9 +369,10 @@ export default function Inventory() {
             </button>
             <button 
               onClick={exportPDF}
-              className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-red-700 transition text-sm"
+              className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-red-700 transition text-sm disabled:opacity-50"
+              disabled={loading}
             >
-              <FileText size={16} /> PDF
+              {loading ? '...جاري التصدير' : <><FileText size={16} /> PDF</>}
             </button>
           </div>
           <button onClick={openAddModal} style={{ backgroundColor: storeSettings.themeColor }} className="text-white px-6 py-3 rounded-xl font-bold transition flex items-center gap-2 shadow-lg">

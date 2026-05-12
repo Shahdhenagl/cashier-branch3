@@ -10,6 +10,7 @@ import html2canvas from 'html2canvas';
 export default function DeferredAccounts() {
   const { customers, orders, storeSettings, checkout } = useStore();
   const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(false);
   
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -68,13 +69,54 @@ export default function DeferredAccounts() {
   const exportPDF = async () => {
     const element = document.getElementById('deferred-table');
     if (!element) return;
-    const canvas = await html2canvas(element, { scale: 2 });
-    const imgData = canvas.toDataURL('image/png');
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-    pdf.save(`deferred_accounts_report_${new Date().toLocaleDateString()}.pdf`);
+    
+    setLoading(true);
+    
+    try {
+      const canvas = await html2canvas(element, { 
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        windowWidth: element.scrollWidth,
+        windowHeight: element.scrollHeight,
+        onclone: (clonedDoc) => {
+          const el = clonedDoc.getElementById('deferred-table');
+          if (el) {
+            el.style.height = 'auto';
+            el.style.overflow = 'visible';
+          }
+        }
+      });
+      
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = pdfWidth;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      // Add the first page
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pdfHeight;
+
+      // Add additional pages if needed
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pdfHeight;
+      }
+      
+      pdf.save(`deferred_accounts_report_${new Date().toLocaleDateString()}.pdf`);
+    } catch (error) {
+      console.error('PDF Export Error:', error);
+      alert('حدث خطأ أثناء تصدير ملف PDF');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleOpenModal = (customer: any) => {
@@ -145,9 +187,10 @@ export default function DeferredAccounts() {
             </button>
             <button 
               onClick={exportPDF}
-              className="flex items-center gap-2 bg-red-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-red-700 transition shadow-lg"
+              className="flex items-center gap-2 bg-red-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-red-700 transition shadow-lg disabled:opacity-50"
+              disabled={loading}
             >
-              <FileText size={18} /> PDF
+              {loading ? '...جاري التصدير' : <><FileText size={18} /> PDF</>}
             </button>
           </div>
           <div className="relative w-full md:w-96">
