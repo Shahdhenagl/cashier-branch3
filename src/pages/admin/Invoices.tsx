@@ -21,25 +21,24 @@ export default function Invoices() {
     const discountValue = Math.max(0, subtotal - order.total);
     const taxValue = Math.max(0, order.total - (subtotal - discountValue));
     
-    // Calculate debt history for this customer if it's a payment receipt
-    let debtInfo = { before: 0, after: 0 };
-    if (isPayment && order.customer) {
+    // Calculate debt as of this transaction
+    let debtAfter = 0;
+    let debtBefore = 0;
+    if (order.customer) {
       const customerOrders = orders.filter(o => o.customer?.id === order.customer.id);
-      // Sort by date to calculate historical balance correctly
       const sortedOrders = [...customerOrders].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
       const currentIndex = sortedOrders.findIndex(o => o.id === order.id);
       
-      // Debt BEFORE this payment = sum of (total - paid) for all orders BEFORE this one
-      const balanceBefore = sortedOrders.slice(0, currentIndex).reduce((sum, o) => {
-        const returnedValue = o.items.reduce((s, i) => s + (i.returned_quantity * i.sale_price), 0);
+      const calcDebt = (upToIndex: number) => sortedOrders.slice(0, upToIndex).reduce((sum, o) => {
+        const itemsSum = o.items.reduce((s, i) => s + (i.quantity * i.sale_price), 0);
+        const discountRatio = itemsSum > 0 ? o.total / itemsSum : 1;
+        const returnedValue = o.items.reduce((s, i) => s + (i.returned_quantity * i.sale_price), 0) * discountRatio;
         const effectiveTotal = o.type === 'payment' ? 0 : (o.total - returnedValue);
         return sum + (effectiveTotal - o.paid_amount);
       }, 0);
-      
-      debtInfo = {
-        before: balanceBefore,
-        after: balanceBefore - order.paid_amount
-      };
+
+      debtBefore = calcDebt(currentIndex);
+      debtAfter = calcDebt(currentIndex + 1);
     }
 
     let itemsHtml = '';
@@ -72,6 +71,10 @@ export default function Invoices() {
             <div class="info-item"><strong>رقم الفاتورة:</strong> <span>#${order.id}</span></div>
             <div class="info-item"><strong>المسؤول:</strong> <span>${order.cashier_name || '—'}</span></div>
             <div class="info-item"><strong>التاريخ:</strong> <span>${printDate}</span></div>
+            <div class="info-item" style="grid-column: span 2; border-top: 1px dashed #e2e8f0; padding-top: 4px; margin-top: 2px;">
+              <strong>إجمالي المديونية الحالية:</strong> 
+              <span style="color: #dc2626; font-size: 14px;">${debtAfter.toFixed(2)} ${storeSettings.currency}</span>
+            </div>
          </div>`
       : `<div class="customer-info-grid">
             <div class="info-item"><strong>اسم العميل:</strong> <span>عميل نقدي</span></div>
@@ -92,21 +95,14 @@ export default function Invoices() {
     .invoice-container{width:148mm;min-height:205mm;margin:0 auto;padding:8mm;position:relative;display:flex;flex-direction:column;gap:10px;}
     
     .header-main{display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #1e293b;padding-bottom:10px;margin-bottom:10px;}
-    .store-identity{display:flex;align-items:center;gap:12px;}
-    .logo{width:60px;height:60px;object-fit:contain;border-radius:10px;}
-    .store-name{font-size:20px;font-weight:900;color:#1e293b;line-height:1;}
-    .store-details{font-size:10px;color:#64748b;margin-top:4px;line-height:1.4;}
+    .logo{width:90px;height:90px;object-fit:contain;border-radius:12px;border:1px solid #e2e8f0;padding:2px;background:#fff;}
+    .store-name{font-size:24px;font-weight:900;color:#1e293b;line-height:1.2;}
+    .store-details{font-size:11px;color:#64748b;margin-top:6px;line-height:1.5;font-weight:bold;}
+    .store-info-center{flex:1;display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 10px;}
     
-    .invoice-title-badge{background:#1e293b;color:#fff;padding:6px 15px;border-radius:6px;font-weight:900;font-size:16px;}
-    
-    .customer-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;background:#f8fafc;padding:10px;border-radius:10px;border:1px solid #e2e8f0;}
-    .info-item{font-size:12px;display:flex;gap:6px;}
-    .info-item strong{color:#64748b;white-space:nowrap;}
-    .info-item span{color:#1e293b;font-weight:700;}
-    
-    .qr-code-container{position:absolute;bottom:65px;right:25px;display:flex;flex-direction:column;align-items:center;gap:3px;}
-    .qr-code-img{width:80px;height:80px;padding:3px;background:#fff;border-radius:6px;border:1px solid #e2e8f0;box-shadow: 0 1px 3px rgba(0,0,0,0.1);}
-    .qr-label{font-size:9px;font-weight:bold;color:#1e293b;text-align:center;margin-top:2px;}
+    .qr-code-container{display:flex;flex-direction:column;align-items:center;gap:3px;}
+    .qr-code-img{width:90px;height:90px;padding:3px;background:#fff;border-radius:10px;border:1px solid #e2e8f0;box-shadow: 0 1px 3px rgba(0,0,0,0.1);}
+    .qr-label{font-size:10px;font-weight:900;color:#1e293b;text-align:center;margin-top:2px;background:#f1f5f9;padding:2px 8px;border-radius:4px;}
 
     table{width:100%;border-collapse:collapse;margin-bottom:10px;}
     thead th{background:#f1f5f9;color:#475569;font-size:12px;padding:8px 6px;text-align:center;border-bottom:2px solid #cbd5e1;}
@@ -133,18 +129,21 @@ export default function Invoices() {
 <body>
   <div class="invoice-container">
     <div class="header-main">
-      <div class="store-identity">
-        <img class="logo" src="${storeSettings.logo}" onerror="this.style.display='none'" />
-        <div>
-          <div class="store-name">${storeSettings.name}</div>
-          <div class="store-details">
-            ${storeSettings.address ? `📍 ${storeSettings.address}<br/>` : ''}
-            ${storeSettings.phone ? `📞 ${storeSettings.phone}` : ''}
-            ${storeSettings.phone2 ? ` | ${storeSettings.phone2}` : ''}
-          </div>
+      <img class="logo" src="${storeSettings.logo}" onerror="this.style.display='none'" />
+      
+      <div class="store-info-center">
+        <div class="store-name">${storeSettings.name}</div>
+        <div class="store-details">
+          ${storeSettings.address ? `📍 ${storeSettings.address}<br/>` : ''}
+          ${storeSettings.phone ? `📞 ${storeSettings.phone}` : ''}
+          ${storeSettings.phone2 ? ` | ${storeSettings.phone2}` : ''}
         </div>
       </div>
-      <div class="invoice-title-badge">${isPayment ? 'إيصال سداد' : 'فاتورة بيع'}</div>
+
+      <div class="qr-code-container">
+        <img class="qr-code-img" src="${qrCodeUrl}" alt="QR Code" />
+        <div class="qr-label">تفاصيل الفاتورة</div>
+      </div>
     </div>
 
     ${customerBlock}
@@ -171,11 +170,11 @@ export default function Invoices() {
       <div style="margin-top:10px; padding:10px; background:#f0f9ff; border-radius:10px; border:1px solid #bae6fd;">
         <div style="display:flex; justify-content:space-between; font-size:12px; color:#0369a1; margin-bottom:4px;">
           <span>المديونية قبل السداد:</span>
-          <strong>${debtInfo.before.toFixed(2)} ${storeSettings.currency}</strong>
+          <strong>${debtBefore.toFixed(2)} ${storeSettings.currency}</strong>
         </div>
         <div class="debt-info-line" style="color:#c2410c; margin-top:5px; border-top:1px dashed #bae6fd; padding-top:5px;">
           <span>المديونية المتبقية:</span>
-          <strong style="font-size:16px;">${Math.max(0, debtInfo.after).toFixed(2)} ${storeSettings.currency}</strong>
+          <strong style="font-size:16px;">${Math.max(0, debtAfter).toFixed(2)} ${storeSettings.currency}</strong>
         </div>
       </div>
       `}
