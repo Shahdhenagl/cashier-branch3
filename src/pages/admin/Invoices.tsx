@@ -329,6 +329,8 @@ export default function Invoices() {
           >
             <TableIcon size={18} /> Excel
           </button>
+          <button 
+            onClick={exportPDF}
             className="flex items-center gap-2 bg-red-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-red-700 transition shadow-lg disabled:opacity-50"
             disabled={loading}
           >
