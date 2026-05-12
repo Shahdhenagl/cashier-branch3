@@ -23,7 +23,7 @@ declare module 'jspdf' {
 }
 
 export default function Analytics() {
-  const { storeSettings, loadAnalyticsData, purchaseInvoices } = useStore();
+  const { storeSettings, loadAnalyticsData, purchaseInvoices, products } = useStore();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | 'thisMonth' | 'thisYear' | 'all'>('30d');
@@ -110,6 +110,7 @@ export default function Analytics() {
       .slice(0, 10);
 
     const procurementCost = purchaseInvoices.reduce((sum, inv) => sum + inv.total, 0);
+    const totalInventoryValue = products.reduce((sum, p) => sum + (p.stock_quantity * (p.average_purchase_price || p.purchase_price || 0)), 0);
 
     return { 
       revenue, cost, profit, margin, 
@@ -117,7 +118,8 @@ export default function Analytics() {
       topProductsByQty, 
       topProductsByProfit, 
       topCustomers,
-      procurementCost
+      procurementCost,
+      totalInventoryValue
     };
   }, [orders]);
 
@@ -274,6 +276,13 @@ export default function Analytics() {
           unit={storeSettings.currency}
           icon={DollarSign} 
           color="amber" 
+        />
+        <StatCard 
+          title="قيمة بضاعة المخزن" 
+          value={stats.totalInventoryValue} 
+          unit={storeSettings.currency}
+          icon={Package} 
+          color="indigo" 
         />
       </div>
 
