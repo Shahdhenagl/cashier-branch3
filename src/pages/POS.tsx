@@ -127,9 +127,9 @@ export default function POS() {
   .info-item strong{color:#64748b;white-space:nowrap;}
   .info-item span{color:#1e293b;font-weight:700;}
   
-  .qr-code-container{position:absolute;bottom:65px;right:25px;display:flex;flex-direction:column;align-items:center;gap:3px;}
-  .qr-code-img{width:80px;height:80px;padding:3px;background:#fff;border-radius:6px;border:1px solid #e2e8f0;box-shadow: 0 1px 3px rgba(0,0,0,0.1);}
-  .qr-label{font-size:9px;font-weight:bold;color:#1e293b;text-align:center;margin-top:2px;}
+  .qr-code-container{display:flex;flex-direction:column;align-items:center;gap:3px;}
+  .qr-code-img{width:90px;height:90px;padding:3px;background:#fff;border-radius:10px;border:1px solid #e2e8f0;box-shadow: 0 1px 3px rgba(0,0,0,0.1);}
+  .qr-label{font-size:10px;font-weight:900;color:#1e293b;text-align:center;margin-top:2px;background:#f1f5f9;padding:2px 8px;border-radius:4px;}
 
   table{width:100%;border-collapse:collapse;margin-bottom:10px;}
   thead th{background:#f1f5f9;color:#475569;font-size:12px;padding:8px 6px;text-align:center;border-bottom:2px solid #cbd5e1;}
@@ -166,6 +166,10 @@ export default function POS() {
           ${currentSettings.phone2 ? ` | ${currentSettings.phone2}` : ''}
         </div>
       </div>
+    </div>
+    <div class="qr-code-container">
+      <img class="qr-code-img" src="${qrCodeUrl}" alt="QR Code" />
+      <div class="qr-label">تفاصيل الفاتورة</div>
     </div>
   </div>
 
@@ -206,10 +210,6 @@ export default function POS() {
     </div>
   </div>
 
-  <div class="qr-code-container">
-    <img class="qr-code-img" src="${qrCodeUrl}" alt="QR Code" />
-    <div class="qr-label">تفاصيل الفاتورة</div>
-  </div>
   <div class="footer">شكراً لثقتكم بنا - ${currentSettings.name} ترحب بكم دائماً</div>
 </div>
 <script>window.onload=()=>{setTimeout(()=>{window.print();window.onafterprint=()=>window.close();},500);}<\/script>
