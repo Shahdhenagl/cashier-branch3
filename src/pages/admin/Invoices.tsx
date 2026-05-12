@@ -104,6 +104,11 @@ export default function Invoices() {
     .qr-code-img{width:90px;height:90px;padding:3px;background:#fff;border-radius:10px;border:1px solid #e2e8f0;box-shadow: 0 1px 3px rgba(0,0,0,0.1);}
     .qr-label{font-size:10px;font-weight:900;color:#1e293b;text-align:center;margin-top:2px;background:#f1f5f9;padding:2px 8px;border-radius:4px;}
 
+    .customer-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;background:#f8fafc;padding:10px;border-radius:10px;border:1px solid #e2e8f0;}
+    .info-item{font-size:12px;display:flex;gap:6px;}
+    .info-item strong{color:#64748b;white-space:nowrap;}
+    .info-item span{color:#1e293b;font-weight:700;}
+
     table{width:100%;border-collapse:collapse;margin-bottom:10px;}
     thead th{background:#f1f5f9;color:#475569;font-size:12px;padding:8px 6px;text-align:center;border-bottom:2px solid #cbd5e1;}
     thead th:nth-child(2){text-align:right;}
@@ -196,10 +201,6 @@ export default function Invoices() {
       ` : ''}
     </div>
 
-    <div class="qr-code-container">
-      <img class="qr-code-img" src="${qrCodeUrl}" alt="QR Code" />
-      <div class="qr-label">تفاصيل الفاتورة</div>
-    </div>
     <div class="footer">شكراً لثقتكم بنا - ${storeSettings.name} ترحب بكم دائماً</div>
   </div>
   <script>window.onload=()=>{setTimeout(()=>{window.print();window.onafterprint=()=>window.close();},500);}<\/script>
