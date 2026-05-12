@@ -1,9 +1,9 @@
-import { useState, useMemo } from 'react';
-import { useStore, type Employee, type EmployeeTransaction } from '../../store/useStore';
+import { useState } from 'react';
+import { useStore, type Employee } from '../../store/useStore';
 import { 
   Users, Plus, Trash2, Edit3, Search, X, 
-  Wallet, Landmark, CreditCard, Smartphone, Zap,
-  History, Calendar, DollarSign, Clock, Briefcase, ArrowRightLeft
+  Wallet, Landmark, CreditCard, Zap,
+  DollarSign, Clock, Briefcase
 } from 'lucide-react';
 
 export default function Employees() {

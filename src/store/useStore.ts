@@ -319,7 +319,7 @@ export const useStore = create<CashierStore>((set, get) => ({
   loadAll: async () => {
     set({ isLoading: true, dbError: null });
     try {
-      const [settingsRes, categoriesRes, productsRes, customersRes, ordersRes, counterRes, cashiersRes] =
+      const [settingsRes, categoriesRes, productsRes, customersRes, ordersRes, counterRes, cashiersRes, employeesRes, employeeTransactionsRes] =
         await Promise.all([
           supabase.from('store_settings').select('*').limit(1).maybeSingle(),
           supabase.from('categories').select('*').order('name'),
