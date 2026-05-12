@@ -18,6 +18,7 @@ export default function Finance() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [filterType, setFilterType] = useState<'daily' | 'monthly' | 'yearly'>('daily');
   const [showModal, setShowModal] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [formData, setFormData] = useState({ 
     category: 'عام', 
@@ -409,6 +410,8 @@ export default function Finance() {
     const element = document.getElementById('finance-report');
     if (!element) return;
     
+    setLoading(true);
+    
     // Hide buttons during capture
     const buttons = element.querySelectorAll('.export-hide');
     buttons.forEach((b: any) => b.style.display = 'none');
@@ -417,26 +420,49 @@ export default function Finance() {
       const canvas = await html2canvas(element, { 
         scale: 2,
         useCORS: true,
-        backgroundColor: '#f8fafc'
+        backgroundColor: '#f8fafc',
+        windowWidth: element.scrollWidth,
+        windowHeight: element.scrollHeight,
+        onclone: (clonedDoc) => {
+          const el = clonedDoc.getElementById('finance-report');
+          if (el) {
+            el.style.height = 'auto';
+            el.style.overflow = 'visible';
+          }
+        }
       });
+
       const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfWidth = 210; // A4 width in mm
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
       
+      // Create PDF with dynamic height to fit all content on one page
+      const pdf = new jsPDF('p', 'mm', [pdfWidth, pdfHeight]);
+      
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`daily_report_${selectedDate}.pdf`);
+      pdf.save(`finance_report_${selectedDate}.pdf`);
     } catch (e) {
       console.error("PDF Export Error:", e);
+      alert("حدث خطأ أثناء تصدير التقرير. يرجى المحاولة مرة أخرى.");
     } finally {
       buttons.forEach((b: any) => b.style.display = '');
+      setLoading(false);
     }
   };
 
   const tc = storeSettings.themeColor;
 
   return (
-    <div id="finance-report" className="p-8 max-w-7xl mx-auto h-[calc(100vh-2rem)] overflow-y-auto" dir="rtl">
+    <div id="finance-report" className="p-8 max-w-7xl mx-auto h-[calc(100vh-2rem)] overflow-y-auto relative" dir="rtl">
+      {/* Loading Overlay for Export */}
+      {loading && (
+        <div className="fixed inset-0 z-[100] bg-white/60 backdrop-blur-md flex flex-col items-center justify-center gap-4 animate-in fade-in duration-300">
+          <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-indigo-900 font-black text-xl animate-pulse">جاري تجهيز التقرير بالكامل...</p>
+          <p className="text-slate-500 font-medium">يرجى الانتظار ثواني قليلة</p>
+        </div>
+      )}
+
       {/* Header & Date Picker */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 bg-white p-6 rounded-[32px] shadow-sm border border-slate-100">
         <div>
