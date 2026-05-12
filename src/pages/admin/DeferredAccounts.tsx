@@ -14,7 +14,12 @@ export default function DeferredAccounts() {
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
-  const [paymentAmount, setPaymentAmount] = useState<string>('');
+  const [paymentForm, setPaymentForm] = useState({
+    cash: '',
+    visa: '',
+    wallet: '',
+    instapay: ''
+  });
 
   // Calculate debts
   const customersWithDebt = customers.map(c => {
@@ -74,18 +79,28 @@ export default function DeferredAccounts() {
 
   const handleOpenModal = (customer: any) => {
     setSelectedCustomer(customer);
-    setPaymentAmount(customer.totalDebt.toString());
+    setPaymentForm({
+      cash: customer.totalDebt.toString(),
+      visa: '',
+      wallet: '',
+      instapay: ''
+    });
     setIsModalOpen(true);
   };
 
   const handleProcessPayment = async () => {
-    const amount = parseFloat(paymentAmount);
-    if (!amount || amount <= 0 || !selectedCustomer) {
+    const cash = parseFloat(paymentForm.cash) || 0;
+    const visa = parseFloat(paymentForm.visa) || 0;
+    const wallet = parseFloat(paymentForm.wallet) || 0;
+    const insta = parseFloat(paymentForm.instapay) || 0;
+    const totalPaid = cash + visa + wallet + insta;
+
+    if (totalPaid <= 0 || !selectedCustomer) {
       alert('الرجاء إدخال مبلغ صحيح');
       return;
     }
     
-    if (amount > selectedCustomer.totalDebt) {
+    if (totalPaid > selectedCustomer.totalDebt + 1) { // +1 for small rounding issues
       alert('المبلغ المدفوع أكبر من إجمالي الدين');
       return;
     }
@@ -94,17 +109,19 @@ export default function DeferredAccounts() {
       // Pass total=0, paidAmount=amount, type='payment'
       const invoiceId = await checkout(
         0, 
-        { name: selectedCustomer.name, phone: selectedCustomer.phone }, 
-        amount, 
-        'payment'
+        { name: selectedCustomer.name, phone: selectedCustomer.phone, custom_id: selectedCustomer.custom_id }, 
+        totalPaid, 
+        'payment',
+        cash >= visa ? 'cash' : 'visa',
+        { cash, visa, wallet, instapay: insta }
       );
       
       alert(`تم تسجيل الدفعة بنجاح!\nرقم الإيصال: ${invoiceId}`);
       setIsModalOpen(false);
       setSelectedCustomer(null);
-      setPaymentAmount('');
+      setPaymentForm({ cash: '', visa: '', wallet: '', instapay: '' });
     } catch (e: any) {
-      alert('حدث خطأ أثناء معالجة الدفعة');
+      alert('حدث خطأ أثناء معالجة الدفعة: ' + e.message);
     }
   };
 
@@ -227,20 +244,53 @@ export default function DeferredAccounts() {
                 <div className="mt-2 text-sm font-semibold">{selectedCustomer.name} - <span dir="ltr">{selectedCustomer.phone}</span></div>
               </div>
 
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">المبلغ المراد سداده</label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    dir="ltr"
-                    className="w-full border border-slate-200 rounded-xl py-4 px-4 text-xl font-black text-center focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-inner"
-                    value={paymentAmount}
-                    onChange={(e) => setPaymentAmount(e.target.value)}
-                    max={selectedCustomer.totalDebt}
-                    min={1}
-                  />
-                  <div className="absolute left-4 top-4 text-slate-400 font-bold">{storeSettings.currency}</div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2 text-center py-2 bg-indigo-50 rounded-xl mb-2">
+                  <span className="text-xs font-bold text-indigo-400">توزيع مبلغ السداد</span>
                 </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 mb-1 uppercase text-right">💵 كاش</label>
+                  <input
+                    type="number" dir="ltr"
+                    className="w-full border border-slate-200 rounded-xl py-3 px-3 text-lg font-black text-center focus:ring-2 focus:ring-indigo-500"
+                    value={paymentForm.cash}
+                    onChange={(e) => setPaymentForm({...paymentForm, cash: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 mb-1 uppercase text-right">💳 فيزا</label>
+                  <input
+                    type="number" dir="ltr"
+                    className="w-full border border-slate-200 rounded-xl py-3 px-3 text-lg font-black text-center focus:ring-2 focus:ring-indigo-500"
+                    value={paymentForm.visa}
+                    onChange={(e) => setPaymentForm({...paymentForm, visa: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 mb-1 uppercase text-right">📱 محفظة</label>
+                  <input
+                    type="number" dir="ltr"
+                    className="w-full border border-slate-200 rounded-xl py-3 px-3 text-lg font-black text-center focus:ring-2 focus:ring-indigo-500"
+                    value={paymentForm.wallet}
+                    onChange={(e) => setPaymentForm({...paymentForm, wallet: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 mb-1 uppercase text-right">⚡ انستا باي</label>
+                  <input
+                    type="number" dir="ltr"
+                    className="w-full border border-slate-200 rounded-xl py-3 px-3 text-lg font-black text-center focus:ring-2 focus:ring-indigo-500"
+                    value={paymentForm.instapay}
+                    onChange={(e) => setPaymentForm({...paymentForm, instapay: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <div className="bg-slate-900 p-4 rounded-2xl text-center">
+                <span className="text-slate-400 text-xs font-bold block mb-1">إجمالي المبلغ المدفوع</span>
+                <span className="text-2xl font-black text-white">
+                  {((parseFloat(paymentForm.cash) || 0) + (parseFloat(paymentForm.visa) || 0) + (parseFloat(paymentForm.wallet) || 0) + (parseFloat(paymentForm.instapay) || 0)).toLocaleString()} {storeSettings.currency}
+                </span>
               </div>
 
               <div className="flex gap-3 pt-2">
