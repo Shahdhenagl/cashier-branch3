@@ -251,7 +251,14 @@ export default function PublicInvoice() {
                 <div className="text-sm font-black text-slate-800">
                   {(order as any).originType === 'purchase' ? ((order as any).supplier?.name || 'مورد') : (order.customer?.name || 'عميل نقدي')}
                 </div>
-                <div className="text-xs font-bold text-slate-500 font-mono" dir="ltr">{order.customer?.phone || '-'}</div>
+                <div className="flex justify-between items-center mt-1">
+                  <div className="text-xs font-bold text-slate-500 font-mono" dir="ltr">{order.customer?.phone || '-'}</div>
+                  {order.customer && (
+                    <div className="text-[10px] font-black bg-red-50 text-red-600 px-2 py-0.5 rounded-lg border border-red-100">
+                      إجمالي المديونية: {((order as any).debtAfter || 0).toFixed(2)}
+                    </div>
+                  )}
+                </div>
              </div>
              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col gap-2">
                 <div className="flex justify-between items-center">

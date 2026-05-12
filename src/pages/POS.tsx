@@ -96,6 +96,10 @@ export default function POS() {
             <div class="info-item"><strong>رقم الفاتورة:</strong> <span>#${invId}</span></div>
             <div class="info-item"><strong>المسؤول:</strong> <span>${activeCashier?.name || '—'}</span></div>
             <div class="info-item"><strong>التاريخ:</strong> <span>${printDate}</span></div>
+            <div class="info-item" style="grid-column: span 2; border-top: 1px dashed #e2e8f0; padding-top: 4px; margin-top: 2px;">
+              <strong>إجمالي المديونية الحالية:</strong> 
+              <span style="color: #dc2626; font-size: 14px;">${(orderDetails.totalDebt || 0).toFixed(2)} ${currentSettings.currency}</span>
+            </div>
          </div>`
       : `<div class="customer-info-grid">
             <div class="info-item"><strong>اسم العميل:</strong> <span>عميل نقدي</span></div>
@@ -287,6 +291,7 @@ export default function POS() {
       customerPhone: currentCustomerPhone,
       customId: currentCustomId,
       paymentMethod: primaryMethod,
+      totalDebt: (customerDebt || 0) + (currentTotal - effectivePaidAmount)
     };
 
     const actualCustomer = useStore.getState().customers.find(c => (currentCustomerPhone && c.phone === currentCustomerPhone) || (currentCustomId && c.custom_id === currentCustomId));
