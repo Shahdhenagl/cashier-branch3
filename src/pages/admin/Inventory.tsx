@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore, type Product } from '../../store/useStore';
-import { Plus, Edit2, Trash2, Search, X, Tag, FileText, Table as TableIcon } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, X, Tag, FileText, Table as TableIcon, Box, AlertTriangle, TrendingUp } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -24,6 +24,10 @@ export default function Inventory() {
   });
 
   const filteredProducts = products.filter(p => p.name.includes(searchQuery) || p.barcode.includes(searchQuery));
+  
+  const totalStockValue = products.reduce((acc, p) => acc + (p.stock_quantity * (p.average_purchase_price || p.purchase_price || 0)), 0);
+  const lowStockCount = products.filter(p => p.stock_quantity < 5).length;
+  const totalItems = products.reduce((acc, p) => acc + p.stock_quantity, 0);
 
   const handleDelete = (id: string, name: string) => {
     if (confirm(`هل أنت متأكد من حذف المنتج: ${name}؟`)) {
@@ -165,6 +169,45 @@ export default function Inventory() {
 
   return (
     <div className="p-8 relative">
+      
+      {/* STATS CARDS */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="bg-white rounded-[32px] p-6 shadow-sm border border-slate-100 flex items-center gap-6 group hover:border-indigo-200 transition-all">
+          <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 group-hover:scale-110 transition-transform">
+            <TrendingUp size={32} />
+          </div>
+          <div>
+            <p className="text-slate-400 font-bold text-sm">إجمالي قيمة المخزون</p>
+            <h3 className="text-2xl font-black text-slate-800">
+              {totalStockValue.toLocaleString()} <span className="text-sm font-normal text-slate-400">{storeSettings.currency}</span>
+            </h3>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-[32px] p-6 shadow-sm border border-slate-100 flex items-center gap-6 group hover:border-emerald-200 transition-all">
+          <div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600 group-hover:scale-110 transition-transform">
+            <Box size={32} />
+          </div>
+          <div>
+            <p className="text-slate-400 font-bold text-sm">إجمالي القطع المتوفرة</p>
+            <h3 className="text-2xl font-black text-slate-800">
+              {totalItems.toLocaleString()} <span className="text-sm font-normal text-slate-400">قطعة</span>
+            </h3>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-[32px] p-6 shadow-sm border border-slate-100 flex items-center gap-6 group hover:border-red-200 transition-all">
+          <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center text-red-600 group-hover:scale-110 transition-transform">
+            <AlertTriangle size={32} />
+          </div>
+          <div>
+            <p className="text-slate-400 font-bold text-sm">منتجات قاربت على النفاد</p>
+            <h3 className="text-2xl font-black text-slate-800">
+              {lowStockCount} <span className="text-sm font-normal text-slate-400">منتج</span>
+            </h3>
+          </div>
+        </div>
+      </div>
       
       {/* ADD PRODUCT MODAL */}
       {showAddModal && (
