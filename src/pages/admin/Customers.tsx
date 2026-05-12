@@ -12,9 +12,17 @@ export default function Customers() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editForm, setEditForm] = useState({ name: '', phone: '', custom_id: '' });
-  const { updateCustomer } = useStore();
+  const [paymentForm, setPaymentForm] = useState({
+    cash: '',
+    visa: '',
+    wallet: '',
+    instapay: '',
+    note: ''
+  });
+  const { updateCustomer, checkout } = useStore();
 
   const filteredCustomers = customers.filter(c => 
     normalizeArabic(c.name).includes(normalizeArabic(searchQuery)) || 
@@ -121,6 +129,37 @@ export default function Customers() {
       alert("تم تحديث بيانات العميل بنجاح");
     } catch (e: any) {
       alert("خطأ في التحديث: " + e.message);
+    }
+  };
+
+  const handlePayDebt = async () => {
+    const cash = parseFloat(paymentForm.cash) || 0;
+    const visa = parseFloat(paymentForm.visa) || 0;
+    const wallet = parseFloat(paymentForm.wallet) || 0;
+    const insta = parseFloat(paymentForm.instapay) || 0;
+    const totalPaid = cash + visa + wallet + insta;
+
+    if (totalPaid <= 0) return alert("يرجى إدخال مبلغ السداد");
+
+    try {
+      await checkout(
+        0, 
+        { name: selectedCustomer.name, phone: selectedCustomer.phone, custom_id: selectedCustomer.custom_id },
+        totalPaid,
+        'payment',
+        cash >= visa ? 'cash' : 'visa',
+        { cash, visa, wallet, instapay: insta }
+      );
+      
+      alert("تم تسجيل السداد بنجاح");
+      setIsPaymentModalOpen(false);
+      setPaymentForm({ cash: '', visa: '', wallet: '', instapay: '', note: '' });
+      
+      // Refresh metrics
+      const metrics = getCustomerMetrics(selectedCustomer.id);
+      setSelectedCustomer({ ...selectedCustomer, ...metrics });
+    } catch (e: any) {
+      alert("خطأ في تسجيل السداد: " + e.message);
     }
   };
 
@@ -458,8 +497,85 @@ export default function Customers() {
                       {selectedCustomer.totalDebt.toLocaleString()} {storeSettings.currency}
                     </p>
                   </div>
+                  {selectedCustomer.totalDebt > 0 && (
+                    <button 
+                      onClick={() => setIsPaymentModalOpen(true)}
+                      className="mr-auto bg-red-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg shadow-red-100 hover:bg-red-700 transition"
+                    >
+                      سداد مبلغ
+                    </button>
+                  )}
                 </div>
               </div>
+
+              {/* PAYMENT SUB-MODAL */}
+              {isPaymentModalOpen && (
+                <div className="mb-8 bg-white p-6 rounded-[32px] border-2 border-indigo-500 shadow-xl animate-in slide-in-from-top-4 duration-300">
+                  <div className="flex justify-between items-center mb-6">
+                    <h4 className="text-xl font-black text-slate-800 flex items-center gap-2">
+                      <Wallet className="text-indigo-600" size={24} />
+                      تسجيل سداد مديونية
+                    </h4>
+                    <button onClick={() => setIsPaymentModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                      <X size={20} />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider text-right">💵 كاش</label>
+                      <input 
+                        type="number" dir="ltr" placeholder="0.00"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:ring-1 focus:outline-none font-bold text-right"
+                        value={paymentForm.cash}
+                        onChange={e => setPaymentForm({...paymentForm, cash: e.target.value})}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider text-right">💳 فيزا</label>
+                      <input 
+                        type="number" dir="ltr" placeholder="0.00"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:ring-1 focus:outline-none font-bold text-right"
+                        value={paymentForm.visa}
+                        onChange={e => setPaymentForm({...paymentForm, visa: e.target.value})}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider text-right">📱 محفظة</label>
+                      <input 
+                        type="number" dir="ltr" placeholder="0.00"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:ring-1 focus:outline-none font-bold text-right"
+                        value={paymentForm.wallet}
+                        onChange={e => setPaymentForm({...paymentForm, wallet: e.target.value})}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider text-right">⚡ انستا باي</label>
+                      <input 
+                        type="number" dir="ltr" placeholder="0.00"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 focus:ring-1 focus:outline-none font-bold text-right"
+                        value={paymentForm.instapay}
+                        onChange={e => setPaymentForm({...paymentForm, instapay: e.target.value})}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <div className="flex flex-col">
+                      <span className="text-xs font-bold text-slate-400">إجمالي المبلغ المدفوع</span>
+                      <span className="text-2xl font-black text-indigo-600">
+                        {((parseFloat(paymentForm.cash) || 0) + (parseFloat(paymentForm.visa) || 0) + (parseFloat(paymentForm.wallet) || 0) + (parseFloat(paymentForm.instapay) || 0)).toLocaleString()} {storeSettings.currency}
+                      </span>
+                    </div>
+                    <button 
+                      onClick={handlePayDebt}
+                      className="bg-indigo-600 text-white px-8 py-3 rounded-2xl font-black shadow-lg hover:bg-indigo-700 transition flex items-center gap-2"
+                    >
+                      تأكيد السداد
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Orders History Table */}
               <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
