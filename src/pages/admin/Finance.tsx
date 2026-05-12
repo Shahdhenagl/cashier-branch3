@@ -16,6 +16,7 @@ export default function Finance() {
   } = useStore();
   
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [filterType, setFilterType] = useState<'daily' | 'monthly' | 'yearly'>('daily');
   const [showModal, setShowModal] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [formData, setFormData] = useState({ 
@@ -38,9 +39,19 @@ export default function Finance() {
   // 1. Transactions before selected date (for Opening Balance)
   const totalsBefore = useMemo(() => {
     const selDate = new Date(selectedDate);
+    let startOfPeriod: Date;
+
+    if (filterType === 'monthly') {
+      startOfPeriod = new Date(selDate.getFullYear(), selDate.getMonth(), 1);
+    } else if (filterType === 'yearly') {
+      startOfPeriod = new Date(selDate.getFullYear(), 0, 1);
+    } else {
+      startOfPeriod = new Date(selectedDate);
+      startOfPeriod.setHours(0,0,0,0);
+    }
     
     const ordersIn = orders
-      .filter(o => new Date(o.date) < selDate)
+      .filter(o => new Date(o.date) < startOfPeriod)
       .reduce((sum, o) => sum + o.paid_amount, 0);
     
     const returnsOut = orders
@@ -60,15 +71,35 @@ export default function Finance() {
 
   const openingBalance = initialBalance + totalsBefore;
 
-  // 2. Daily Transactions
-  const dailyOrders = orders.filter(o => getDateStr(o.date) === selectedDate);
-  const dailyExpenses = expenses.filter(e => getDateStr(e.date) === selectedDate);
-  const dailyPurchases = purchaseInvoices.filter(inv => getDateStr(inv.created_at) === selectedDate);
+  // 2. Period Transactions
+  const periodTransactions = useMemo(() => {
+    const selDate = new Date(selectedDate);
+    return {
+      orders: orders.filter(o => {
+        const d = new Date(o.date);
+        if (filterType === 'monthly') return d.getFullYear() === selDate.getFullYear() && d.getMonth() === selDate.getMonth();
+        if (filterType === 'yearly') return d.getFullYear() === selDate.getFullYear();
+        return getDateStr(o.date) === selectedDate;
+      }),
+      expenses: expenses.filter(e => {
+        const d = new Date(e.date);
+        if (filterType === 'monthly') return d.getFullYear() === selDate.getFullYear() && d.getMonth() === selDate.getMonth();
+        if (filterType === 'yearly') return d.getFullYear() === selDate.getFullYear();
+        return getDateStr(e.date) === selectedDate;
+      }),
+      purchases: purchaseInvoices.filter(inv => {
+        const d = new Date(inv.created_at);
+        if (filterType === 'monthly') return d.getFullYear() === selDate.getFullYear() && d.getMonth() === selDate.getMonth();
+        if (filterType === 'yearly') return d.getFullYear() === selDate.getFullYear();
+        return getDateStr(inv.created_at) === selectedDate;
+      })
+    };
+  }, [orders, expenses, purchaseInvoices, selectedDate, filterType]);
 
-  const dailyIncome = dailyOrders.reduce((sum, o) => sum + o.paid_amount, 0);
-  const dailyExpensesTotal = dailyExpenses.reduce((sum, e) => sum + e.amount, 0);
-  const dailyPurchasesTotal = dailyPurchases.reduce((sum, inv) => sum + inv.paid_amount, 0);
-  const dailyReturnsValue = dailyOrders.reduce((sum, o) => {
+  const dailyIncome = periodTransactions.orders.reduce((sum, o) => sum + o.paid_amount, 0);
+  const dailyExpensesTotal = periodTransactions.expenses.reduce((sum, e) => sum + e.amount, 0);
+  const dailyPurchasesTotal = periodTransactions.purchases.reduce((sum, inv) => sum + inv.paid_amount, 0);
+  const dailyReturnsValue = periodTransactions.orders.reduce((sum, o) => {
     return sum + o.items.reduce((iSum, item) => iSum + (item.returned_quantity * item.sale_price), 0);
   }, 0);
 
@@ -78,11 +109,11 @@ export default function Finance() {
   // 3. Payment Method Breakdown (Daily)
   const getDailyByMethod = (method: string) => {
     const field = `paid_${method}` as keyof Order | keyof Expense | keyof PurchaseInvoice;
-    const inc = dailyOrders.reduce((sum, o) => sum + ((o as any)[field] || 0), 0);
-    const outExp = dailyExpenses.reduce((sum, e) => sum + ((e as any)[field] || 0), 0);
-    const outPur = dailyPurchases.reduce((sum, inv) => sum + ((inv as any)[field] || 0), 0);
+    const inc = periodTransactions.orders.reduce((sum, o) => sum + ((o as any)[field] || 0), 0);
+    const outExp = periodTransactions.expenses.reduce((sum, e) => sum + ((e as any)[field] || 0), 0);
+    const outPur = periodTransactions.purchases.reduce((sum, inv) => sum + ((inv as any)[field] || 0), 0);
     
-    const outRet = dailyOrders.reduce((sum, o) => {
+    const outRet = periodTransactions.orders.reduce((sum, o) => {
       if (o.payment_method !== method) return sum;
       const itemsSum = o.items.reduce((s, i) => s + (i.quantity * i.sale_price), 0);
       const discountRatio = itemsSum > 0 ? o.total / itemsSum : 1;
@@ -103,7 +134,7 @@ export default function Finance() {
   const allDailyTransactions = useMemo(() => {
     const list: any[] = [];
     
-    dailyOrders.forEach(o => {
+    periodTransactions.orders.forEach(o => {
       list.push({
         id: o.id,
         type: o.type === 'sale' ? 'إيراد مبيعات' : 'تحصيل مديونية',
@@ -112,7 +143,7 @@ export default function Finance() {
         split: { cash: o.paid_cash, visa: o.paid_visa, wallet: o.paid_wallet, instapay: o.paid_instapay },
         note: o.customer?.name || 'عميل نقدي',
         isOut: false,
-        time: new Date(o.date).toLocaleTimeString('ar-SA'),
+        time: new Date(o.date).toLocaleString('ar-SA'),
         rawDate: o.date,
         original: o,
         originType: 'order'
@@ -132,13 +163,13 @@ export default function Finance() {
           split: { cash: returnedVal, visa: 0, wallet: 0, instapay: 0 }, // Simplified for returns
           note: `مرتجع من فاتورة #${o.id}`,
           isOut: true,
-          time: new Date(o.date).toLocaleTimeString('ar-SA'),
+          time: new Date(o.date).toLocaleString('ar-SA'),
           rawDate: o.date
         });
       }
     });
 
-    dailyExpenses.forEach(e => {
+    periodTransactions.expenses.forEach(e => {
       list.push({
         id: e.id,
         type: `مصروف: ${e.category}`,
@@ -147,14 +178,14 @@ export default function Finance() {
         split: { cash: e.paid_cash, visa: e.paid_visa, wallet: e.paid_wallet, instapay: e.paid_instapay },
         note: e.note,
         isOut: true,
-        time: new Date(e.date).toLocaleTimeString('ar-SA'),
+        time: new Date(e.date).toLocaleString('ar-SA'),
         rawDate: e.date,
         original: e,
         originType: 'expense'
       });
     });
 
-    dailyPurchases.forEach(inv => {
+    periodTransactions.purchases.forEach(inv => {
       const supplier = useStore.getState().suppliers.find(s => s.id === inv.supplier_id);
       const isPayment = inv.total === 0;
       list.push({
@@ -165,7 +196,7 @@ export default function Finance() {
         split: { cash: inv.paid_cash, visa: inv.paid_visa, wallet: inv.paid_wallet, instapay: inv.paid_instapay },
         note: `${supplier?.name || 'مورد'} - #${inv.invoice_number}`,
         isOut: true,
-        time: new Date(inv.created_at).toLocaleTimeString('ar-SA'),
+        time: new Date(inv.created_at).toLocaleString('ar-SA'),
         rawDate: inv.created_at,
         original: inv,
         originType: 'purchase'
@@ -173,7 +204,7 @@ export default function Finance() {
     });
 
     return list.sort((a, b) => new Date(b.rawDate).getTime() - new Date(a.rawDate).getTime());
-  }, [dailyOrders, dailyExpenses, dailyPurchases]);
+  }, [periodTransactions]);
 
   // --- Handlers ---
 
@@ -419,13 +450,44 @@ export default function Finance() {
         </div>
 
         <div className="flex flex-wrap items-center gap-4 export-hide">
+          <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-2xl">
+            {[
+              { id: 'daily', label: 'يومي' },
+              { id: 'monthly', label: 'شهري' },
+              { id: 'yearly', label: 'سنوي' },
+            ].map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setFilterType(t.id as any)}
+                className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  filterType === t.id 
+                    ? 'bg-white text-indigo-600 shadow-sm' 
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+
           <div className="flex items-center gap-3 bg-white px-4 py-2.5 rounded-2xl border border-slate-200 shadow-inner">
             <Calendar size={20} className="text-indigo-600" />
             <input 
-              type="date" 
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="bg-transparent font-black text-slate-700 outline-none"
+              type={filterType === 'monthly' ? 'month' : (filterType === 'yearly' ? 'number' : 'date')} 
+              value={filterType === 'yearly' ? selectedDate.split('-')[0] : (filterType === 'monthly' ? selectedDate.slice(0,7) : selectedDate)}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (filterType === 'yearly') {
+                  setSelectedDate(`${val}-01-01`);
+                } else if (filterType === 'monthly') {
+                  setSelectedDate(`${val}-01`);
+                } else {
+                  setSelectedDate(val);
+                }
+              }}
+              className="bg-transparent font-black text-slate-700 outline-none w-32"
+              placeholder={filterType === 'yearly' ? 'سنة' : ''}
+              {...(filterType === 'yearly' ? { min: 2020, max: 2050 } : {})}
             />
           </div>
           
@@ -475,7 +537,7 @@ export default function Finance() {
             +{dailyIncome.toLocaleString()} <span className="text-sm font-normal opacity-50">{storeSettings.currency}</span>
           </h3>
           <div className="mt-2 text-[10px] text-emerald-500 font-bold flex items-center gap-1">
-             مبيعات وتحصيل مديونيات
+             {filterType === 'daily' ? 'مبيعات وتحصيل مديونيات اليوم' : (filterType === 'monthly' ? 'مبيعات وتحصيل مديونيات الشهر' : 'مبيعات وتحصيل مديونيات السنة')}
           </div>
         </div>
 
@@ -486,7 +548,7 @@ export default function Finance() {
             -{ (dailyExpensesTotal + dailyPurchasesTotal + dailyReturnsValue).toLocaleString() } <span className="text-sm font-normal opacity-50">{storeSettings.currency}</span>
           </h3>
           <div className="mt-2 text-[10px] text-red-500 font-bold flex items-center gap-1">
-             مصاريف، مشتريات، ومرتجعات
+             {filterType === 'daily' ? 'مصاريف، مشتريات، ومرتجعات اليوم' : (filterType === 'monthly' ? 'مصاريف، مشتريات، ومرتجعات الشهر' : 'مصاريف، مشتريات، ومرتجعات السنة')}
           </div>
         </div>
 
@@ -528,7 +590,7 @@ export default function Finance() {
         <div className="p-6 border-b border-slate-50 flex items-center justify-between">
           <h3 className="font-black text-slate-800 flex items-center gap-2">
             <ArrowRightLeft size={20} className="text-indigo-600" />
-            سجل معاملات اليوم
+            سجل معاملات {filterType === 'daily' ? 'اليوم' : (filterType === 'monthly' ? 'الشهر' : 'السنة')}
           </h3>
           <span className="text-xs font-bold bg-slate-100 text-slate-500 px-3 py-1 rounded-full">
             {allDailyTransactions.length} عملية
