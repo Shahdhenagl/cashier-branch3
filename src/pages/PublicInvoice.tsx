@@ -226,9 +226,6 @@ export default function PublicInvoice() {
               </div>
             </div>
             <div className="flex flex-col items-center sm:items-end gap-2">
-              <div className="bg-slate-800 text-white px-6 py-2.5 rounded-xl font-black text-lg shadow-lg">
-                {isPayment ? 'إيصال سداد' : ((order as any).originType === 'purchase' ? 'فاتورة مشتريات' : 'فاتورة بيع')}
-              </div>
               <div className="text-slate-400 font-mono text-sm font-bold">#{order.id}</div>
               {order.cashier_name && (
                 <div className="text-[10px] text-slate-400 font-bold bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
