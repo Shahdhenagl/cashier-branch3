@@ -116,10 +116,10 @@ export default function POS() {
   .invoice-container{width:148mm;min-height:205mm;margin:0 auto;padding:8mm;position:relative;display:flex;flex-direction:column;gap:10px;}
   
   .header-main{display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #1e293b;padding-bottom:10px;margin-bottom:10px;}
-  .store-identity{display:flex;align-items:center;gap:12px;}
-  .logo{width:60px;height:60px;object-fit:contain;border-radius:10px;}
-  .store-name{font-size:20px;font-weight:900;color:#1e293b;line-height:1;}
-  .store-details{font-size:10px;color:#64748b;margin-top:4px;line-height:1.4;}
+  .logo{width:90px;height:90px;object-fit:contain;border-radius:12px;border:1px solid #e2e8f0;padding:2px;background:#fff;}
+  .store-name{font-size:24px;font-weight:900;color:#1e293b;line-height:1.2;}
+  .store-details{font-size:11px;color:#64748b;margin-top:6px;line-height:1.5;font-weight:bold;}
+  .store-info-center{flex:1;display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 10px;}
   
   
   .customer-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;background:#f8fafc;padding:10px;border-radius:10px;border:1px solid #e2e8f0;}
@@ -156,21 +156,21 @@ export default function POS() {
 <body>
 <div class="invoice-container">
   <div class="header-main">
-    <div class="store-identity">
-      <img class="logo" src="${currentSettings.logo}" onerror="this.style.display='none'" />
-      <div>
-        <div class="store-name">${currentSettings.name}</div>
-        <div class="store-details">
-          ${currentSettings.address ? `📍 ${currentSettings.address}<br/>` : ''}
-          ${currentSettings.phone ? `📞 ${currentSettings.phone}` : ''}
-          ${currentSettings.phone2 ? ` | ${currentSettings.phone2}` : ''}
-        </div>
-      </div>
-    </div>
     <div class="qr-code-container">
       <img class="qr-code-img" src="${qrCodeUrl}" alt="QR Code" />
       <div class="qr-label">تفاصيل الفاتورة</div>
     </div>
+    
+    <div class="store-info-center">
+      <div class="store-name">${currentSettings.name}</div>
+      <div class="store-details">
+        ${currentSettings.address ? `📍 ${currentSettings.address}<br/>` : ''}
+        ${currentSettings.phone ? `📞 ${currentSettings.phone}` : ''}
+        ${currentSettings.phone2 ? ` | ${currentSettings.phone2}` : ''}
+      </div>
+    </div>
+
+    <img class="logo" src="${currentSettings.logo}" onerror="this.style.display='none'" />
   </div>
 
   ${customerBlock}
