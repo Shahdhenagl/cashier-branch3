@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import type { Order, StoreSettings } from '../store/useStore';
-import { CheckCircle2, Printer, Download, Phone } from 'lucide-react';
+import { CheckCircle2, Printer, Download, Phone, User } from 'lucide-react';
 import html2canvas from 'html2canvas';
 
 export default function PublicInvoice() {
@@ -225,11 +225,15 @@ export default function PublicInvoice() {
                 </div>
               </div>
             </div>
-            <div className="flex flex-col items-center sm:items-end gap-2">
-              <div className="text-slate-400 font-mono text-sm font-bold">#{order.id}</div>
+            <div className="flex flex-col items-center sm:items-end gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-slate-400 font-bold text-[10px] sm:text-xs uppercase tracking-widest">رقم الفاتورة</span>
+                <span className="text-lg sm:text-xl font-black text-slate-900 font-mono bg-slate-100 px-3 py-1 rounded-lg border border-slate-200">#{order.id}</span>
+              </div>
               {order.cashier_name && (
-                <div className="text-[10px] text-slate-400 font-bold bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
-                  المحاسب: {order.cashier_name}
+                <div className="flex items-center gap-1.5 text-[11px] font-black text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-full border border-indigo-100 shadow-sm">
+                  <User size={12} className="opacity-70" />
+                  <span>المحاسب: {order.cashier_name}</span>
                 </div>
               )}
             </div>
