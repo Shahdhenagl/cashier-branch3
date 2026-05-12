@@ -367,51 +367,53 @@ export default function Customers() {
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4">
           <div id="customer-profile-modal" className="bg-white rounded-[40px] shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-300">
             {/* Modal Header */}
-            <div className="p-8 flex justify-between items-start border-b border-slate-100 relative overflow-hidden bg-white">
+            <div className="p-8 flex justify-between items-center border-b border-slate-100 relative overflow-hidden bg-white">
                <div 
                 className="absolute top-0 right-0 w-32 h-32 opacity-5 pointer-events-none"
                 style={{ backgroundColor: storeSettings.themeColor, borderRadius: '0 0 0 100%' }}
               />
-              <div className="flex gap-6 items-center">
+              <div className="flex gap-4 items-center">
                 <div 
                   style={{ backgroundColor: storeSettings.themeColor, boxShadow: `0 8px 16px ${storeSettings.themeColor}30` }}
-                  className="w-16 h-16 rounded-2xl flex items-center justify-center text-white text-2xl font-black"
+                  className="w-16 h-16 rounded-2xl flex items-center justify-center text-white text-2xl font-black shrink-0"
                 >
                   {selectedCustomer.name.charAt(0)}
                 </div>
-                <div>
+                
+                <div className="flex items-center gap-4 flex-wrap">
                   {isEditMode ? (
                     <div className="flex flex-col gap-2">
                       <input 
-                        className="text-2xl font-black text-slate-800 border-b-2 border-indigo-500 focus:outline-none"
+                        className="text-xl font-black text-slate-800 border-b-2 border-indigo-500 focus:outline-none"
                         value={editForm.name}
                         onChange={e => setEditForm({ ...editForm, name: e.target.value })}
                       />
                       <div className="flex gap-4">
                          <input 
-                          className="bg-slate-100 px-2 py-1 rounded-lg text-slate-600 font-bold focus:outline-none"
+                          className="bg-slate-100 px-2 py-1 rounded-lg text-slate-600 font-bold focus:outline-none text-sm"
                           value={editForm.phone}
                           onChange={e => setEditForm({ ...editForm, phone: e.target.value })}
                         />
                         <input 
                           placeholder="رقم الكارت ID"
-                          className="bg-indigo-50 px-2 py-1 rounded-lg text-indigo-600 font-mono font-black border border-indigo-200 focus:outline-none"
+                          className="bg-indigo-50 px-2 py-1 rounded-lg text-indigo-600 font-mono font-black border border-indigo-200 focus:outline-none text-sm"
                           value={editForm.custom_id}
                           onChange={e => setEditForm({ ...editForm, custom_id: e.target.value })}
                         />
                       </div>
                     </div>
                   ) : (
-                    <>
-                      <h2 className="text-2xl font-black text-slate-800">{selectedCustomer.name}</h2>
-                      <div className="flex items-center gap-3 mt-1.5 text-slate-500 font-bold text-xs">
+                    <div className="flex flex-col md:flex-row md:items-center gap-x-4 gap-y-1">
+                      <h2 className="text-xl font-black text-slate-800 whitespace-nowrap">{selectedCustomer.name}</h2>
+                      <div className="hidden md:block w-px h-4 bg-slate-200" />
+                      <div className="flex items-center gap-3 text-slate-500 font-bold text-xs flex-wrap">
                         <span className="flex items-center gap-1"><CreditCard size={12} /> {selectedCustomer.phone}</span>
                         <span className="w-1 h-1 rounded-full bg-slate-300" />
-                        <span className="bg-indigo-50 px-2 py-0.5 rounded-lg text-indigo-600 font-mono font-black border border-indigo-100">ID: {selectedCustomer.custom_id || selectedCustomer.id.substring(0, 8)}</span>
+                        <span className="bg-indigo-50 px-2 py-0.5 rounded-lg text-indigo-600 font-mono font-black border border-indigo-100 text-[10px]">ID: {selectedCustomer.custom_id || selectedCustomer.id.substring(0, 8)}</span>
                         <span className="w-1 h-1 rounded-full bg-slate-300" />
-                        <span className="text-[10px]">سجل منذ: {new Date(selectedCustomer.timestamp).toLocaleDateString('ar-SA')}</span>
+                        <span className="text-[10px] whitespace-nowrap">سجل منذ: {new Date(selectedCustomer.timestamp).toLocaleDateString('ar-SA')}</span>
                       </div>
-                    </>
+                    </div>
                   )}
                 </div>
               </div>
