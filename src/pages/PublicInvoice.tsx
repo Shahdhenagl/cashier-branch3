@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import type { Order, StoreSettings } from '../store/useStore';
-import { CheckCircle2, Printer, Download } from 'lucide-react';
+import { CheckCircle2, Printer, Download, Phone } from 'lucide-react';
 import html2canvas from 'html2canvas';
 
 export default function PublicInvoice() {
@@ -182,13 +182,19 @@ export default function PublicInvoice() {
     <div className="min-h-screen bg-slate-50 py-4 sm:py-10 px-2 sm:px-4 font-sans flex flex-col items-center gap-4 sm:gap-6" dir="rtl">
       
       {/* Action Buttons */}
-      <div className="flex gap-3 no-print w-full max-w-2xl justify-center">
+      <div className="flex flex-wrap gap-3 no-print w-full max-w-2xl justify-center">
          <button onClick={() => window.print()} className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-slate-800 text-white px-4 sm:px-6 py-3 rounded-xl font-bold shadow-md hover:bg-slate-900 transition text-sm">
             <Printer size={18} /> طباعة
          </button>
          <button onClick={downloadAsImage} className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-indigo-600 text-white px-4 sm:px-6 py-3 rounded-xl font-bold shadow-md hover:bg-indigo-700 transition text-sm">
             <Download size={18} /> حفظ كصورة
          </button>
+         <a 
+            href={`tel:${settings.phone}`} 
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-emerald-600 text-white px-4 sm:px-6 py-3 rounded-xl font-bold shadow-md hover:bg-emerald-700 transition text-sm"
+         >
+            <Phone size={18} /> اتصل بنا
+         </a>
       </div>
 
       {/* Invoice Area */}
