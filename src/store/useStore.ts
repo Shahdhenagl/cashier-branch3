@@ -113,6 +113,30 @@ export interface StoreSettings {
   initial_balance: number;
 }
 
+export interface Employee {
+  id: string;
+  name: string;
+  job_title: string;
+  working_hours: string;
+  monthly_salary: number;
+  created_at: string;
+}
+
+export interface EmployeeTransaction {
+  id: string;
+  employee_id: string;
+  amount: number;
+  type: 'salary' | 'advance';
+  payment_method: 'cash' | 'visa' | 'wallet' | 'instapay';
+  paid_cash: number;
+  paid_visa: number;
+  paid_wallet: number;
+  paid_instapay: number;
+  month: string;
+  note: string;
+  created_at: string;
+}
+
 // ─── Store Interface ──────────────────────────────────────────
 interface CashierStore {
   storeSettings: StoreSettings;
@@ -130,6 +154,8 @@ interface CashierStore {
   isLoading: boolean;
   dbError: string | null;
   activeCashier: Cashier | null;
+  employees: Employee[];
+  employeeTransactions: EmployeeTransaction[];
 
   // Data loading
   loadAll: () => Promise<void>;
@@ -179,6 +205,13 @@ interface CashierStore {
   addCashier: (cashier: Omit<Cashier, 'id' | 'created_at'>) => Promise<void>;
   updateCashier: (id: string, cashier: Partial<Cashier>) => Promise<void>;
   deleteCashier: (id: string) => Promise<void>;
+
+  // Employees
+  loadEmployees: () => Promise<void>;
+  addEmployee: (employee: Omit<Employee, 'id' | 'created_at'>) => Promise<void>;
+  updateEmployee: (id: string, employee: Partial<Employee>) => Promise<void>;
+  deleteEmployee: (id: string) => Promise<void>;
+  addEmployeeTransaction: (transaction: Omit<EmployeeTransaction, 'id' | 'created_at'>) => Promise<void>;
 
   // Purchases
   loadPurchaseInvoices: () => Promise<void>;
@@ -240,6 +273,8 @@ export const useStore = create<CashierStore>((set, get) => ({
   orders: [],
   expenses: [],
   purchaseInvoices: [],
+  employees: [],
+  employeeTransactions: [],
   invoiceCounter: 1,
   activeInvoiceId: '1',
   isLoading: false,
@@ -297,6 +332,8 @@ export const useStore = create<CashierStore>((set, get) => ({
             .limit(200),
           supabase.from('invoice_counter').select('current_value').limit(1).maybeSingle(),
           supabase.from('cashiers').select('*').order('created_at', { ascending: false }),
+          supabase.from('employees').select('*').order('created_at', { ascending: false }),
+          supabase.from('employee_transactions').select('*').order('created_at', { ascending: false }),
         ]);
 
       const settings = settingsRes.data ? mapSettings(settingsRes.data as Record<string, unknown>) : get().storeSettings;
@@ -370,7 +407,9 @@ export const useStore = create<CashierStore>((set, get) => ({
         isLoading: false,
         activeCashier: sessionStorage.getItem('active_cashier_name') 
           ? ((cashiersRes.data ?? []) as Cashier[]).find(c => c.name === sessionStorage.getItem('active_cashier_name')) || null
-          : (sessionStorage.getItem('cashier_pos_auth') === 'true' ? { id: 'master', name: 'المدير', pin: '123456', phone: '', photo_url: '', created_at: '' } : null)
+          : (sessionStorage.getItem('cashier_pos_auth') === 'true' ? { id: 'master', name: 'المدير', pin: '123456', phone: '', photo_url: '', created_at: '' } : null),
+        employees: (employeesRes.data ?? []) as Employee[],
+        employeeTransactions: (employeeTransactionsRes.data ?? []) as EmployeeTransaction[],
       });
 
       // Fetch expenses separately to avoid breaking the whole loadAll if the table is missing
@@ -1142,5 +1181,72 @@ setupRealtime: () => {
     set((state) => ({
       customers: state.customers.map((c) => (c.id === id ? { ...c, ...updated } : c))
     }));
+  },
+
+  // ── Employees ─────────────────────────────────────────────
+  loadEmployees: async () => {
+    const [empRes, transRes] = await Promise.all([
+      supabase.from('employees').select('*').order('created_at', { ascending: false }),
+      supabase.from('employee_transactions').select('*').order('created_at', { ascending: false }),
+    ]);
+    if (empRes.data) set({ employees: empRes.data as Employee[] });
+    if (transRes.data) set({ employeeTransactions: transRes.data as EmployeeTransaction[] });
+  },
+
+  addEmployee: async (employee) => {
+    const { data, error } = await supabase.from('employees').insert(employee).select().single();
+    if (error) {
+      console.error("Add Employee Error:", error);
+      return;
+    }
+    if (data) {
+      set((state) => ({ employees: [data as Employee, ...state.employees] }));
+    }
+  },
+
+  updateEmployee: async (id, updated) => {
+    const { data, error } = await supabase.from('employees').update(updated).eq('id', id).select().single();
+    if (error) {
+      console.error("Update Employee Error:", error);
+      return;
+    }
+    if (data) {
+      set((state) => ({ employees: state.employees.map((e) => (e.id === id ? { ...e, ...updated } : e)) }));
+    }
+  },
+
+  deleteEmployee: async (id) => {
+    await supabase.from('employees').delete().eq('id', id);
+    set((state) => ({ 
+      employees: state.employees.filter((e) => e.id !== id),
+      employeeTransactions: state.employeeTransactions.filter(t => t.employee_id !== id)
+    }));
+  },
+
+  addEmployeeTransaction: async (transaction) => {
+    const { data, error } = await supabase.from('employee_transactions').insert(transaction).select().single();
+    if (error) {
+      console.error("Add Employee Transaction Error:", error);
+      return;
+    }
+    
+    if (data) {
+      const emp = get().employees.find(e => e.id === transaction.employee_id);
+      const note = `${transaction.type === 'salary' ? 'راتب' : 'سلفة'} - ${emp?.name || 'موظف'}${transaction.note ? ` (${transaction.note})` : ''}`;
+      
+      // Add to expenses
+      await get().addExpense({
+        category: 'رواتب',
+        amount: transaction.amount,
+        paid_cash: transaction.paid_cash,
+        paid_visa: transaction.paid_visa,
+        paid_wallet: transaction.paid_wallet,
+        paid_instapay: transaction.paid_instapay,
+        note: note,
+        payment_method: transaction.payment_method
+      });
+
+      set((state) => ({ employeeTransactions: [data as EmployeeTransaction, ...state.employeeTransactions] }));
+    }
   },
 }));

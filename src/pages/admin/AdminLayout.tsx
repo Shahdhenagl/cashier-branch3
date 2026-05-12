@@ -15,6 +15,7 @@ export default function AdminLayout() {
     { name: 'الموردين والمشتريات', path: '/admin/suppliers', icon: Users },
     { name: 'حسابات الآجل', path: '/admin/deferred', icon: BookUser },
     { name: 'إدارة المحاسبين', path: '/admin/cashiers', icon: Users },
+    { name: 'الموظفون والرواتب', path: '/admin/employees', icon: Users },
     { name: 'الخزينة والمصاريف', path: '/admin/finance', icon: Wallet },
     { name: 'إعدادات النظام', path: '/admin/settings', icon: Settings },
   ];

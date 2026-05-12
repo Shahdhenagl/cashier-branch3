@@ -14,6 +14,7 @@ import Settings from './pages/admin/Settings';
 import Analytics from './pages/admin/Analytics';
 import Finance from './pages/admin/Finance';
 import Cashiers from './pages/admin/Cashiers';
+import Employees from './pages/admin/Employees';
 import PublicInvoice from './pages/PublicInvoice';
 import { useStore } from './store/useStore';
 
@@ -162,6 +163,7 @@ function App() {
             <Route path="cashiers" element={<Cashiers />} />
             <Route path="deferred" element={<DeferredAccounts />} />
             <Route path="finance" element={<Finance />} />
+            <Route path="employees" element={<Employees />} />
             <Route path="settings" element={<Settings />} />
           </Route>
           <Route path="/view-invoice/:id" element={<PublicInvoice />} />
