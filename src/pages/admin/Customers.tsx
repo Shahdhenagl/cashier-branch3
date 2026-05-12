@@ -42,7 +42,7 @@ export default function Customers() {
     const totalSpent = customerOrders.reduce((sum, o) => {
       if (o.type === 'payment') return sum;
       return sum + o.total;
-    }, 0) - totalReturns;
+    }, 0);
 
     const totalProfit = customerOrders.reduce((sum, o) => {
       if (o.type === 'payment') return sum;
@@ -52,12 +52,10 @@ export default function Customers() {
       }, 0);
     }, 0);
 
-    // Debt = (Original Total - Returns) - Paid Amount
+    // Debt = Original Total - Paid Amount (Returns are cash payout, don't affect debt)
     const totalDebt = Math.max(0, customerOrders.reduce((sum, o) => {
-      const itemsSum = o.items.reduce((s, i) => s + (i.quantity * i.sale_price), 0);
-      const discountRatio = itemsSum > 0 ? o.total / itemsSum : 1;
-      const returnedValue = o.items.reduce((s, i) => s + (i.returned_quantity * i.sale_price), 0) * discountRatio;
-      return sum + ((o.total - returnedValue) - o.paid_amount);
+      const effectiveTotal = o.type === 'payment' ? 0 : o.total;
+      return sum + (effectiveTotal - o.paid_amount);
     }, 0));
 
     return { customerOrders, totalSpent, totalProfit, totalDebt, totalReturns };

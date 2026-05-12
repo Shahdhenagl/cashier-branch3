@@ -530,8 +530,8 @@ export default function POS() {
 
                 const initialDebt = Math.max(0, activeReturnOrder.total - activeReturnOrder.paid_amount);
                 const totalReturnedValue = activeReturnOrder.items.reduce((sum: number, item: any) => sum + (item.returned_quantity * item.sale_price), 0) * discountRatio;
-                const cashRefund = Math.max(0, totalReturnedValue - initialDebt);
-                const debtReduction = Math.min(totalReturnedValue, initialDebt);
+                const cashRefund = totalReturnedValue;
+                const debtReduction = 0;
 
                 return (
                   <>

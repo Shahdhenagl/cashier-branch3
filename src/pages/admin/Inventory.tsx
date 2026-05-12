@@ -10,6 +10,7 @@ export default function Inventory() {
   const [searchQuery, setSearchQuery] = useState('');
   const [newCategoryName, setNewCategoryName] = useState('');
   const [showCatForm, setShowCatForm] = useState(false);
+  const [showLowStock, setShowLowStock] = useState(false);
   
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
@@ -24,7 +25,11 @@ export default function Inventory() {
     category_id: categories[0]?.id || ''
   });
 
-  const filteredProducts = products.filter(p => p.name.includes(searchQuery) || p.barcode.includes(searchQuery));
+  const filteredProducts = products.filter(p => {
+    const matchesSearch = p.name.includes(searchQuery) || (p.barcode && p.barcode.includes(searchQuery));
+    const matchesStock = showLowStock ? p.stock_quantity < 5 : true;
+    return matchesSearch && matchesStock;
+  });
   
   const totalStockValue = products.reduce((acc, p) => acc + (p.stock_quantity * (p.average_purchase_price || p.purchase_price || 0)), 0);
   const lowStockCount = products.filter(p => p.stock_quantity < 5).length;
@@ -238,7 +243,10 @@ export default function Inventory() {
           </div>
         </div>
 
-        <div className="bg-white rounded-[32px] p-6 shadow-sm border border-slate-100 flex items-center gap-6 group hover:border-red-200 transition-all">
+        <div 
+          onClick={() => setShowLowStock(!showLowStock)}
+          className={`bg-white rounded-[32px] p-6 shadow-sm border flex items-center gap-6 group hover:border-red-200 transition-all cursor-pointer ${showLowStock ? 'border-red-500 bg-red-50/20 ring-4 ring-red-50' : 'border-slate-100'}`}
+        >
           <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center text-red-600 group-hover:scale-110 transition-transform">
             <AlertTriangle size={32} />
           </div>

@@ -425,7 +425,7 @@ export default function Invoices() {
                 filteredOrders.map((order) => {
                   const hasReturns = order.items.some(i => i.returned_quantity > 0);
                   const returnedValue = order.items.reduce((sum, i) => sum + (i.returned_quantity * i.sale_price), 0);
-                  const effectiveDebt = order.type === 'payment' ? 0 : Math.max(0, (order.total - returnedValue) - order.paid_amount);
+                  const effectiveDebt = order.type === 'payment' ? 0 : Math.max(0, order.total - order.paid_amount);
 
                   return (
                     <tr key={order.id} className={`hover:bg-slate-50 transition ${hasReturns ? 'bg-red-50/20' : ''}`}>
@@ -435,6 +435,16 @@ export default function Invoices() {
                           <div className="flex flex-col">
                             <span className="font-bold flex items-center gap-1"><User size={14} style={{ color: storeSettings.themeColor }} /> {order.customer.name}</span>
                             <span className="text-xs text-slate-500 font-mono mt-1" dir="ltr">{order.customer.phone}</span>
+                            {(() => {
+                              const cDebt = orders.filter(o => o.customer?.id === order.customer!.id)
+                                .reduce((sum, o) => {
+                                  const eTotal = o.type === 'payment' ? 0 : o.total;
+                                  return sum + (eTotal - o.paid_amount);
+                                }, 0);
+                              return cDebt > 0 ? (
+                                <span className="text-[10px] font-black text-red-500 mt-1 bg-red-50 px-2 py-0.5 rounded border border-red-100 w-fit">إجمالي الأجل: {cDebt.toFixed(2)}</span>
+                              ) : null;
+                            })()}
                           </div>
                         ) : (
                           <span className="text-slate-400 text-xs font-bold bg-slate-100 px-2 py-1 rounded">عميل نقدي</span>
