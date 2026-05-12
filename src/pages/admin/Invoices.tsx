@@ -92,24 +92,24 @@ export default function Invoices() {
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
     *{margin:0;padding:0;box-sizing:border-box;font-family:'Cairo', sans-serif;}
     body{background:#fff;color:#1e293b;padding:0;margin:0;}
-    .invoice-container{width:148mm;min-height:205mm;margin:0 auto;padding:8mm;position:relative;display:flex;flex-direction:column;gap:10px;}
+    .invoice-container{width:148mm;min-height:100mm;margin:0 auto;padding:5mm;position:relative;display:flex;flex-direction:column;gap:5px;}
     
-    .header-main{display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #1e293b;padding-bottom:10px;margin-bottom:10px;}
-    .logo{width:90px;height:90px;object-fit:contain;border-radius:12px;border:1px solid #e2e8f0;padding:2px;background:#fff;}
+    .header-main{display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #1e293b;padding-bottom:5px;margin-bottom:5px;}
+    .logo{width:80px;height:80px;object-fit:contain;border-radius:12px;border:1px solid #e2e8f0;padding:2px;background:#fff;}
     .store-name{font-size:24px;font-weight:900;color:#1e293b;line-height:1.2;}
-    .store-details{font-size:11px;color:#64748b;margin-top:6px;line-height:1.5;font-weight:bold;}
+    .store-details{font-size:10px;color:#64748b;margin-top:3px;line-height:1.3;font-weight:bold;}
     .store-info-center{flex:1;display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 10px;}
     
     .qr-code-container{display:flex;flex-direction:column;align-items:center;gap:3px;}
-    .qr-code-img{width:90px;height:90px;padding:3px;background:#fff;border-radius:10px;border:1px solid #e2e8f0;box-shadow: 0 1px 3px rgba(0,0,0,0.1);}
+    .qr-code-img{width:80px;height:80px;padding:3px;background:#fff;border-radius:10px;border:1px solid #e2e8f0;box-shadow: 0 1px 3px rgba(0,0,0,0.1);}
     .qr-label{font-size:10px;font-weight:900;color:#1e293b;text-align:center;margin-top:2px;background:#f1f5f9;padding:2px 8px;border-radius:4px;}
 
-    .customer-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;background:#f8fafc;padding:10px;border-radius:10px;border:1px solid #e2e8f0;}
+    .customer-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:5px;background:#f8fafc;padding:8px;border-radius:10px;border:1px solid #e2e8f0;}
     .info-item{font-size:12px;display:flex;gap:6px;}
     .info-item strong{color:#64748b;white-space:nowrap;}
     .info-item span{color:#1e293b;font-weight:700;}
 
-    table{width:100%;border-collapse:collapse;margin-bottom:10px;}
+    table{width:100%;border-collapse:collapse;margin-bottom:5px;}
     thead th{background:#f1f5f9;color:#475569;font-size:12px;padding:8px 6px;text-align:center;border-bottom:2px solid #cbd5e1;}
     thead th:nth-child(2){text-align:right;}
     thead th:last-child{text-align:left;}
@@ -122,12 +122,12 @@ export default function Invoices() {
     .status-paid{background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;}
     .status-debt{background:#fef2f2;color:#dc2626;border:1px solid #fecaca;}
     
-    .footer{text-align:center;margin-top:30px;padding-top:15px;border-top:1px dashed #cbd5e1;font-size:12px;color:#94a3b8;font-weight:bold;}
+    .footer{text-align:center;margin-top:15px;padding-top:10px;border-top:1px dashed #cbd5e1;font-size:11px;color:#94a3b8;font-weight:bold;}
     
     @media print{
       @page{size:A5;margin:0;}
       body{-webkit-print-color-adjust:exact;}
-      .invoice-container{width:148mm;height:210mm;padding:10mm;}
+      .invoice-container{width:148mm;height:auto;padding:5mm;}
     }
   </style>
 </head>
