@@ -156,10 +156,7 @@ export default function POS() {
 <body>
 <div class="invoice-container">
   <div class="header-main">
-    <div class="qr-code-container">
-      <img class="qr-code-img" src="${qrCodeUrl}" alt="QR Code" />
-      <div class="qr-label">تفاصيل الفاتورة</div>
-    </div>
+    <img class="logo" src="${currentSettings.logo}" onerror="this.style.display='none'" />
     
     <div class="store-info-center">
       <div class="store-name">${currentSettings.name}</div>
@@ -170,7 +167,10 @@ export default function POS() {
       </div>
     </div>
 
-    <img class="logo" src="${currentSettings.logo}" onerror="this.style.display='none'" />
+    <div class="qr-code-container">
+      <img class="qr-code-img" src="${qrCodeUrl}" alt="QR Code" />
+      <div class="qr-label">تفاصيل الفاتورة</div>
+    </div>
   </div>
 
   ${customerBlock}
