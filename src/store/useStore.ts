@@ -231,9 +231,11 @@ interface CashierStore {
 
   // Offline Sync
   offlineQueue: any[];
+  offlineReturnsQueue: any[];
   isOnline: boolean;
   isSyncing: boolean;
   syncOfflineQueue: () => Promise<void>;
+  syncOfflineReturnsQueue: () => Promise<void>;
 
   // Auth
   isAdminAuthenticated: boolean;
@@ -290,6 +292,7 @@ export const useStore = create<CashierStore>((set, get) => ({
   isLoading: false,
   dbError: null,
   offlineQueue: typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('cashier_offline_queue') || '[]') : [],
+  offlineReturnsQueue: typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('cashier_offline_returns_queue') || '[]') : [],
   isOnline: typeof navigator !== 'undefined' ? navigator.onLine : true,
   isSyncing: false,
   activeCashier: null,
@@ -608,7 +611,7 @@ export const useStore = create<CashierStore>((set, get) => ({
           product_name: item.name,
           barcode: item.barcode,
           quantity: item.quantity,
-          returned_quantity: 0,
+          returned_quantity: item.returned_quantity || 0,
           sale_price: item.sale_price,
           purchase_price: item.average_purchase_price || item.purchase_price || 0,
         }));
@@ -618,7 +621,8 @@ export const useStore = create<CashierStore>((set, get) => ({
         for (const item of offlineOrder.items) {
           const { data: prodData } = await supabase.from('products').select('stock_quantity').eq('id', item.id).single();
           const currentStock = prodData?.stock_quantity ?? 0;
-          await supabase.from('products').update({ stock_quantity: Math.max(0, currentStock - item.quantity) }).eq('id', item.id);
+          const netQty = item.quantity - (item.returned_quantity || 0);
+          await supabase.from('products').update({ stock_quantity: Math.max(0, currentStock - netQty) }).eq('id', item.id);
         }
 
         set((s) => ({
@@ -638,6 +642,7 @@ export const useStore = create<CashierStore>((set, get) => ({
     });
 
     new BroadcastChannel('cashier-sync').postMessage('sync_products');
+    get().syncOfflineReturnsQueue();
   },
 
   // ── Cart ───────────────────────────────────────────────────
@@ -922,43 +927,165 @@ export const useStore = create<CashierStore>((set, get) => ({
 
     const newReturnedQty = item.returned_quantity + returnQty;
 
-    // Update DB
-    const orderItemRow = await supabase
-      .from('order_items')
-      .select('id, returned_quantity')
-      .eq('order_id', orderId)
-      .eq('product_id', productId)
-      .single();
+    const executeOfflineReturn = () => {
+      const updatedItems = order.items.map((i, idx) =>
+        idx === itemIndex ? { ...i, returned_quantity: newReturnedQty } : i
+      );
+      const updatedOrders = state.orders.map((o, idx) =>
+        idx === orderIndex ? { ...o, items: updatedItems } : o
+      );
+      const updatedProducts = state.products.map((p) =>
+        p.id === productId ? { ...p, stock_quantity: p.stock_quantity + returnQty } : p
+      );
 
-    if (orderItemRow.data) {
-      await supabase
+      if (orderId.startsWith('OFF-')) {
+        const updatedQueue = state.offlineQueue.map((o) => {
+          if (o.id === orderId) {
+            return {
+              ...o,
+              items: o.items.map((i: any) =>
+                i.id === productId ? { ...i, returned_quantity: newReturnedQty } : i
+              ),
+            };
+          }
+          return o;
+        });
+        localStorage.setItem('cashier_offline_queue', JSON.stringify(updatedQueue));
+        set({
+          orders: updatedOrders,
+          products: updatedProducts,
+          offlineQueue: updatedQueue,
+        });
+      } else {
+        const newOfflineReturn = {
+          orderId,
+          productId,
+          returnQty,
+          date: new Date().toISOString(),
+        };
+        const updatedReturnsQueue = [...state.offlineReturnsQueue, newOfflineReturn];
+        localStorage.setItem('cashier_offline_returns_queue', JSON.stringify(updatedReturnsQueue));
+        set({
+          orders: updatedOrders,
+          products: updatedProducts,
+          offlineReturnsQueue: updatedReturnsQueue,
+        });
+      }
+
+      new BroadcastChannel('cashier-sync').postMessage('sync_products');
+      return true;
+    };
+
+    try {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        throw new Error("No network connectivity");
+      }
+
+      const orderItemRow = await supabase
         .from('order_items')
-        .update({ returned_quantity: newReturnedQty })
-        .eq('id', (orderItemRow.data as Record<string, unknown>).id as string);
+        .select('id, returned_quantity')
+        .eq('order_id', orderId)
+        .eq('product_id', productId)
+        .single();
+
+      if (orderItemRow.error) {
+        throw orderItemRow.error;
+      }
+
+      if (orderItemRow.data) {
+        const { error: updateError } = await supabase
+          .from('order_items')
+          .update({ returned_quantity: newReturnedQty })
+          .eq('id', (orderItemRow.data as Record<string, unknown>).id as string);
+        if (updateError) throw updateError;
+      }
+
+      const product = state.products.find((p) => p.id === productId);
+      if (product) {
+        const { error: prodError } = await supabase
+          .from('products')
+          .update({ stock_quantity: product.stock_quantity + returnQty })
+          .eq('id', productId);
+        if (prodError) throw prodError;
+      }
+
+      const updatedItems = order.items.map((i, idx) =>
+        idx === itemIndex ? { ...i, returned_quantity: newReturnedQty } : i
+      );
+      const updatedOrders = state.orders.map((o, idx) =>
+        idx === orderIndex ? { ...o, items: updatedItems } : o
+      );
+      const updatedProducts = state.products.map((p) =>
+        p.id === productId ? { ...p, stock_quantity: p.stock_quantity + returnQty } : p
+      );
+
+      set({ orders: updatedOrders, products: updatedProducts });
+      new BroadcastChannel('cashier-sync').postMessage('sync_products');
+      return true;
+    } catch (err) {
+      console.warn("Network offline or Supabase return failed. Falling back to offline return:", err);
+      return executeOfflineReturn();
+    }
+  },
+
+  syncOfflineReturnsQueue: async () => {
+    const state = get();
+    if (state.isSyncing || state.offlineReturnsQueue.length === 0) return;
+
+    set({ isSyncing: true });
+
+    const queue = [...state.offlineReturnsQueue];
+    const failedReturns = [];
+
+    for (const returnItem of queue) {
+      try {
+        const orderItemRow = await supabase
+          .from('order_items')
+          .select('id, returned_quantity')
+          .eq('order_id', returnItem.orderId)
+          .eq('product_id', returnItem.productId)
+          .single();
+
+        if (orderItemRow.error) throw orderItemRow.error;
+
+        if (orderItemRow.data) {
+          const currentReturned = (orderItemRow.data as any).returned_quantity || 0;
+          const { error: updateError } = await supabase
+            .from('order_items')
+            .update({ returned_quantity: currentReturned + returnItem.returnQty })
+            .eq('id', (orderItemRow.data as any).id);
+          if (updateError) throw updateError;
+        }
+
+        const { data: prodData, error: prodGetError } = await supabase
+          .from('products')
+          .select('stock_quantity')
+          .eq('id', returnItem.productId)
+          .single();
+        
+        if (prodGetError) throw prodGetError;
+
+        const currentStock = prodData?.stock_quantity ?? 0;
+        const { error: prodError } = await supabase
+          .from('products')
+          .update({ stock_quantity: currentStock + returnItem.returnQty })
+          .eq('id', returnItem.productId);
+        
+        if (prodError) throw prodError;
+
+      } catch (err) {
+        console.error("Failed to sync offline return:", returnItem, err);
+        failedReturns.push(returnItem);
+      }
     }
 
-    const product = state.products.find((p) => p.id === productId);
-    if (product) {
-      await supabase
-        .from('products')
-        .update({ stock_quantity: product.stock_quantity + returnQty })
-        .eq('id', productId);
-    }
+    localStorage.setItem('cashier_offline_returns_queue', JSON.stringify(failedReturns));
+    set({
+      offlineReturnsQueue: failedReturns,
+      isSyncing: false
+    });
 
-    // Update local state
-    const updatedItems = order.items.map((i, idx) =>
-      idx === itemIndex ? { ...i, returned_quantity: newReturnedQty } : i
-    );
-    const updatedOrders = state.orders.map((o, idx) =>
-      idx === orderIndex ? { ...o, items: updatedItems } : o
-    );
-    const updatedProducts = state.products.map((p) =>
-      p.id === productId ? { ...p, stock_quantity: p.stock_quantity + returnQty } : p
-    );
-
-    set({ orders: updatedOrders, products: updatedProducts });
     new BroadcastChannel('cashier-sync').postMessage('sync_products');
-    return true;
   },
 
   // ── Admin ──────────────────────────────────────────────────
