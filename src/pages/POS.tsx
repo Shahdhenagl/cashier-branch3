@@ -6,7 +6,7 @@ import { normalizeArabic } from '../utils/textUtils';
 
 
 export default function POS() {
-  const { products, categories, cart, addToCart, removeFromCart, updateQuantity, updatePrice, clearCart, checkout, processReturn, storeSettings, orders, activeInvoiceId, customers, activeCashier, logoutPOS } = useStore();
+  const { products, categories, cart, addToCart, removeFromCart, updateQuantity, updatePrice, clearCart, checkout, processReturn, storeSettings, orders, activeInvoiceId, customers, activeCashier, logoutPOS, isOnline, offlineQueue, isSyncing, syncOfflineQueue } = useStore();
   const navigate = useNavigate();
 
   const [activeCategory, setActiveCategory] = useState<string>('all');
@@ -44,6 +44,32 @@ export default function POS() {
   }, [isDarkMode]);
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
+
+  // Online/Offline sync listener
+  useEffect(() => {
+    const handleOnline = () => {
+      useStore.setState({ isOnline: true });
+      syncOfflineQueue();
+    };
+    const handleOffline = () => {
+      useStore.setState({ isOnline: false });
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    // Initial check
+    useStore.setState({ isOnline: navigator.onLine });
+    if (navigator.onLine) {
+      syncOfflineQueue();
+    }
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSearchOrder = () => {
     const order = orders.find(o => o.id.toLowerCase() === returnSearchQuery.toLowerCase());
@@ -625,9 +651,33 @@ export default function POS() {
               <div className="absolute -bottom-1 -right-1 bg-green-500 w-4 h-4 rounded-full border-2 border-white dark:border-slate-900"></div>
             </div>
             <div className="flex flex-col">
-              <h1 className="text-xl font-black bg-clip-text text-transparent bg-gradient-to-l from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400">
-                أهلاً، {activeCashier?.name?.split(' ')[0] || 'المحاسب'}
-              </h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-black bg-clip-text text-transparent bg-gradient-to-l from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400">
+                  أهلاً، {activeCashier?.name?.split(' ')[0] || 'المحاسب'}
+                </h1>
+                
+                {/* Offline Status Badge */}
+                {!isOnline ? (
+                  <span className="bg-red-500 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full flex items-center gap-1 animate-pulse shadow-sm">
+                    🔴 أوفلاين ({offlineQueue.length} محلياً)
+                  </span>
+                ) : isSyncing ? (
+                  <span className="bg-amber-500 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+                    ⏳ جاري الرفع...
+                  </span>
+                ) : offlineQueue.length > 0 ? (
+                  <button 
+                    onClick={() => syncOfflineQueue()}
+                    className="bg-indigo-600 text-white hover:bg-indigo-700 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full flex items-center gap-1 transition shadow-sm"
+                  >
+                    🔁 مزامنة ({offlineQueue.length} فواتير)
+                  </button>
+                ) : (
+                  <span className="bg-emerald-500 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+                    🟢 متصل
+                  </span>
+                )}
+              </div>
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{storeSettings.name}</span>
             </div>
           </div>
