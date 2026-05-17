@@ -119,6 +119,12 @@ export default function Inventory() {
       alert("الرجاء ملء جميع الحقول المطلوبة (الاسم والباركود).");
       return;
     }
+
+    const duplicate = products.find(p => p.barcode === formData.barcode && p.id !== editingProductId);
+    if (duplicate) {
+      alert(`عذراً، هذا الباركود مسجل من قبل للمنتج: "${duplicate.name}". يرجى إدخال باركود فريد.`);
+      return;
+    }
     
     if (editingProductId) {
       updateProduct(editingProductId, { ...formData });

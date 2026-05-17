@@ -162,6 +162,7 @@ interface CashierStore {
   // Data loading
   loadAll: () => Promise<void>;
   loadSettingsOnly: () => Promise<void>;
+  loadProductsOnly: () => Promise<void>;
 
   // Cart
   addToCart: (product: Product) => void;
@@ -477,6 +478,22 @@ export const useStore = create<CashierStore>((set, get) => ({
     } catch(e) { console.error(e); }
   },
 
+  loadProductsOnly: async () => {
+    try {
+      const { data, error } = await supabase.from('products').select('*').order('name');
+      if (!error && data) {
+        set({
+          products: data.map((p: any) => ({
+            ...p,
+            average_purchase_price: p.average_purchase_price ?? p.purchase_price ?? 0
+          })) as Product[]
+        });
+      }
+    } catch (e) {
+      console.error("Error loading products only:", e);
+    }
+  },
+
   // ── Cart ───────────────────────────────────────────────────
   addToCart: (product) =>
     set((state) => {
@@ -664,6 +681,8 @@ export const useStore = create<CashierStore>((set, get) => ({
       activeInvoiceId: nextCounter.toString(),
     });
 
+    new BroadcastChannel('cashier-sync').postMessage('sync_products');
+
     return invoiceId;
   },
 
@@ -718,6 +737,7 @@ export const useStore = create<CashierStore>((set, get) => ({
     );
 
     set({ orders: updatedOrders, products: updatedProducts });
+    new BroadcastChannel('cashier-sync').postMessage('sync_products');
     return true;
   },
 
@@ -926,17 +946,17 @@ setupRealtime: () => {
 
   addProduct: async (product) => {
     await supabase.from('products').insert(product);
-    // State will be updated via Realtime subscription
+    new BroadcastChannel('cashier-sync').postMessage('sync_products');
   },
 
   updateProduct: async (id, updated) => {
     await supabase.from('products').update(updated).eq('id', id);
-    // State will be updated via Realtime subscription
+    new BroadcastChannel('cashier-sync').postMessage('sync_products');
   },
 
   deleteProduct: async (id) => {
     await supabase.from('products').delete().eq('id', id);
-    // State will be updated via Realtime subscription
+    new BroadcastChannel('cashier-sync').postMessage('sync_products');
   },
 
   // ── Expenses ──────────────────────────────────────────────
@@ -1131,6 +1151,8 @@ setupRealtime: () => {
       purchaseInvoices: [completeInvoice, ...state.purchaseInvoices],
       products: updatedProducts
     });
+
+    new BroadcastChannel('cashier-sync').postMessage('sync_products');
   },
 
   paySupplierDebt: async (supplierId, amount, splitPayments) => {

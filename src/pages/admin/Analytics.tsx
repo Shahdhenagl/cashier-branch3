@@ -23,7 +23,7 @@ declare module 'jspdf' {
 }
 
 export default function Analytics() {
-  const { storeSettings, loadAnalyticsData, purchaseInvoices, products } = useStore();
+  const { storeSettings, loadAnalyticsData, purchaseInvoices, products, expenses } = useStore();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | 'thisMonth' | 'thisYear' | 'all'>('30d');
@@ -112,6 +112,30 @@ export default function Analytics() {
     const procurementCost = purchaseInvoices.reduce((sum, inv) => sum + inv.total, 0);
     const totalInventoryValue = products.reduce((sum, p) => sum + (p.stock_quantity * (p.average_purchase_price || p.purchase_price || 0)), 0);
 
+    // Calculate time-filtered expenses
+    let startLimit: Date | null = null;
+    const now = new Date();
+    if (timeRange === '7d') {
+      startLimit = new Date();
+      startLimit.setDate(startLimit.getDate() - 7);
+    } else if (timeRange === '30d') {
+      startLimit = new Date();
+      startLimit.setDate(startLimit.getDate() - 30);
+    } else if (timeRange === 'thisMonth') {
+      startLimit = new Date(now.getFullYear(), now.getMonth(), 1);
+    } else if (timeRange === 'thisYear') {
+      startLimit = new Date(now.getFullYear(), 0, 1);
+    }
+
+    const filteredExpenses = expenses.filter(exp => {
+      if (!startLimit) return true;
+      const expDate = new Date(exp.date);
+      return expDate >= startLimit;
+    });
+
+    const totalExpenses = filteredExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+    const finalNetProfit = profit - totalExpenses;
+
     return { 
       revenue, cost, profit, margin, 
       orderCount: orders.filter(o => o.type === 'sale').length,
@@ -119,9 +143,11 @@ export default function Analytics() {
       topProductsByProfit, 
       topCustomers,
       procurementCost,
-      totalInventoryValue
+      totalInventoryValue,
+      totalExpenses,
+      finalNetProfit
     };
-  }, [orders]);
+  }, [orders, expenses, purchaseInvoices, products, timeRange]);
 
   // ── Export Logic ─────────────────────────────────────────────
   const exportExcel = () => {
@@ -132,7 +158,9 @@ export default function Analytics() {
       ['ملخص عام', '', '', ''],
       ['إجمالي المبيعات', stats.revenue, storeSettings.currency, ''],
       ['إجمالي التكلفة', stats.cost, storeSettings.currency, ''],
-      ['إجمالي الربح', stats.profit, storeSettings.currency, ''],
+      ['إجمالي الربح (مجمل)', stats.profit, storeSettings.currency, ''],
+      ['إجمالي المصاريف والتكاليف', stats.totalExpenses, storeSettings.currency, ''],
+      ['صافي الربح النهائي', stats.finalNetProfit, storeSettings.currency, ''],
       ['هامش الربح', stats.margin.toFixed(2) + '%', '', ''],
       ['عدد الفواتير', stats.orderCount, '', ''],
       [''],
@@ -256,6 +284,21 @@ export default function Analytics() {
           icon={DollarSign} 
           color="emerald" 
           increase={stats.profit > 0} 
+        />
+        <StatCard 
+          title="المصاريف والتكاليف" 
+          value={stats.totalExpenses} 
+          unit={storeSettings.currency}
+          icon={TrendingDown} 
+          color="slate" 
+        />
+        <StatCard 
+          title="صافي الربح النهائي" 
+          value={stats.finalNetProfit} 
+          unit={storeSettings.currency}
+          icon={DollarSign} 
+          color="emerald" 
+          increase={stats.finalNetProfit > 0} 
         />
         <StatCard 
           title="هامش الربح" 
