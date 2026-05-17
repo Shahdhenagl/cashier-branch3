@@ -602,7 +602,8 @@ export default function Customers() {
                       selectedCustomer.customerOrders.map((order: any) => {
                         const returnedValue = order.items.reduce((sum: number, i: any) => sum + (i.returned_quantity * i.sale_price), 0);
                         const netTotal = order.total - returnedValue;
-                        const rowDebt = netTotal - order.paid_amount;
+                        // Debt is based on the original invoice total vs paid — returns are cash refunds, NOT debt reductions
+                        const rowDebt = order.total - order.paid_amount;
                         const isDebt = rowDebt > 0;
                         const isPayment = order.type === 'payment';
                         
