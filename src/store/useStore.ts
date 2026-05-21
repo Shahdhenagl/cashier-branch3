@@ -1267,7 +1267,7 @@ setupRealtime: () => {
                 } as Product : p
               );
             } else if (eventType === 'DELETE') {
-              updatedProducts = updatedProducts.filter((p) => p.id === (oldRecord as any).id);
+              updatedProducts = updatedProducts.filter((p) => p.id !== (oldRecord as any).id);
             }
             return { products: updatedProducts };
           });
@@ -1292,18 +1292,18 @@ setupRealtime: () => {
   },
 
   addProduct: async (product) => {
+    // Realtime subscription handles the live INSERT — no need to broadcast
     await supabase.from('products').insert(product);
-    new BroadcastChannel('cashier-sync').postMessage('sync_products');
   },
 
   updateProduct: async (id, updated) => {
+    // Realtime subscription handles the live UPDATE — no need to broadcast
     await supabase.from('products').update(updated).eq('id', id);
-    new BroadcastChannel('cashier-sync').postMessage('sync_products');
   },
 
   deleteProduct: async (id) => {
+    // Realtime subscription handles the live DELETE — no need to broadcast
     await supabase.from('products').delete().eq('id', id);
-    new BroadcastChannel('cashier-sync').postMessage('sync_products');
   },
 
   // ── Expenses ──────────────────────────────────────────────
