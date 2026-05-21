@@ -125,7 +125,8 @@ export default function Finance() {
   };
 
   const methodsBreakdown = {
-    cash: getDailyByMethod('cash'),
+    // الرصيد البدائي يُعتبر كاش فعلي في الخزينة — يُضاف على قيمة الكاش
+    cash: getDailyByMethod('cash') + openingBalance,
     visa: getDailyByMethod('visa'),
     wallet: getDailyByMethod('wallet'),
     instapay: getDailyByMethod('instapay'),
