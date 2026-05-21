@@ -11,6 +11,7 @@ export interface Product {
   sale_price: number;
   stock_quantity: number;
   category_id: string;
+  is_hidden?: boolean; // إخفاء المنتج من الكاشير دون حذفه
 }
 
 export interface Category {
