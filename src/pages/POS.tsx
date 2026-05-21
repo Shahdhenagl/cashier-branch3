@@ -371,6 +371,7 @@ export default function POS() {
 
   const filteredProducts = products.filter(
     (p) =>
+      !p.is_hidden &&                                           // لا يظهر المنتج المخفي في الكاشير
       (activeCategory === 'all' || p.category_id === activeCategory) &&
       p.name.includes(searchQuery)
   );
